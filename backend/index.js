@@ -167,17 +167,23 @@ app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (
     user.username = username;
     
     if (req.file) {
+      // Check for token
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+         console.error("Missing BLOB_READ_WRITE_TOKEN");
+         return res.status(500).json({ error: "Server configuration error: Missing Blob Token" });
+      }
+
       // Upload to Vercel Blob
       try {
-        const blob = await put(req.file.originalname, req.file.buffer, { 
+        const filename = `${Date.now()}-${req.file.originalname}`;
+        const blob = await put(filename, req.file.buffer, { 
           access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN // Required env var
+          token: process.env.BLOB_READ_WRITE_TOKEN
         });
         user.avatar = blob.url;
       } catch (uploadError) {
         console.error("Vercel Blob upload failed:", uploadError);
-        // Fallback or error handling? For now, log it.
-        return res.status(500).json({ error: "Failed to upload image" });
+        return res.status(500).json({ error: "Failed to upload image: " + uploadError.message });
       }
     } else if (req.body.avatarUrl) {
        // Allow updating via URL string if provided (fallback)
