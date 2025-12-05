@@ -148,10 +148,10 @@ app.post("/api/auth/register", async (req, res) => {
     // Send Welcome Email asynchronously (don't block response)
     sendWelcomeEmail(email, username);
 
-    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET);
+    const token = jwt.sign({ id: newUser.id, username: newUser.username, role: newUser.role }, JWT_SECRET);
 
     res.json({ 
-      user: { id: newUser.id, username: newUser.username, email: newUser.email },
+      user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role, avatar: newUser.avatar },
       token 
     });
   } catch (error) {
@@ -170,10 +170,10 @@ app.post("/api/auth/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
 
     res.json({ 
-      user: { id: user.id, username: user.username, avatar: user.avatar },
+      user: { id: user.id, username: user.username, email: user.email, role: user.role, avatar: user.avatar },
       token 
     });
   } catch (error) {
