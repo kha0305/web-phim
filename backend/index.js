@@ -132,18 +132,12 @@ if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
   }
 }
 
-// Configure Multer
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // On Vercel, use /tmp. Locally, use uploads/
-    const dest = process.env.VERCEL ? '/tmp' : 'uploads/';
-    cb(null, dest);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configure Multer (Use Memory Storage for Vercel Blob)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Vercel Blob
+const { put } = require('@vercel/blob');
 
 // Manual DB Sync Route (for Vercel)
 app.get("/api/sync-db", async (req, res) => {
@@ -156,9 +150,7 @@ app.get("/api/sync-db", async (req, res) => {
   }
 });
 
-const upload = multer({ storage: storage });
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Not needed with Blob
 
 // ...
 
@@ -175,10 +167,18 @@ app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (
     user.username = username;
     
     if (req.file) {
-      // Assuming server runs on localhost:5000 or similar. In production, use full URL or relative path handling in frontend.
-      // For now, we store the relative path.
-      const avatarUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      user.avatar = avatarUrl;
+      // Upload to Vercel Blob
+      try {
+        const blob = await put(req.file.originalname, req.file.buffer, { 
+          access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN // Required env var
+        });
+        user.avatar = blob.url;
+      } catch (uploadError) {
+        console.error("Vercel Blob upload failed:", uploadError);
+        // Fallback or error handling? For now, log it.
+        return res.status(500).json({ error: "Failed to upload image" });
+      }
     } else if (req.body.avatarUrl) {
        // Allow updating via URL string if provided (fallback)
        user.avatar = req.body.avatarUrl;
