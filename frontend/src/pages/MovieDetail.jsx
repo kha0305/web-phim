@@ -415,6 +415,40 @@ const MovieDetail = () => {
                     progressRef.current = time;
                     if (totalDuration) totalDurationRef.current = totalDuration;
                   }}
+                  skipSegments={[
+                    { start: 0, end: 60, label: "Bỏ qua giới thiệu" },
+                  ]}
+                  onNext={() => {
+                    // Find current server and index
+                    const server = movie.episodes.find(s => s.server_name === currentEpisode.server_name);
+                    if (server) {
+                      const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
+                      if (currentIndex !== -1 && currentIndex < server.server_data.length - 1) {
+                        handleWatch(server.server_data[currentIndex + 1], server.server_name);
+                      }
+                    }
+                  }}
+                  onPrev={() => {
+                    const server = movie.episodes.find(s => s.server_name === currentEpisode.server_name);
+                    if (server) {
+                      const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
+                      if (currentIndex > 0) {
+                        handleWatch(server.server_data[currentIndex - 1], server.server_name);
+                      }
+                    }
+                  }}
+                  hasNext={(() => {
+                     const server = movie.episodes.find(s => s.server_name === currentEpisode.server_name);
+                     if (!server) return false;
+                     const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
+                     return currentIndex !== -1 && currentIndex < server.server_data.length - 1;
+                  })()}
+                  hasPrev={(() => {
+                     const server = movie.episodes.find(s => s.server_name === currentEpisode.server_name);
+                     if (!server) return false;
+                     const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
+                     return currentIndex > 0;
+                  })()}
                 />
               ) : (
                 <iframe

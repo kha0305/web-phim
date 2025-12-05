@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 
-const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
+const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = [], onNext, onPrev, hasNext, hasPrev }) => {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const [qualityLevels, setQualityLevels] = useState([]);
@@ -127,12 +127,34 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
     }
   };
 
+  const [showSkipButton, setShowSkipButton] = useState(null); // { start, end, label }
+
   const handleTimeUpdate = () => {
     const time = videoRef.current.currentTime;
     const totalDuration = videoRef.current.duration;
+    
+    // Skip Button Logic
+    let activeSegment = null;
+    if (skipSegments && skipSegments.length > 0) {
+      for (const segment of skipSegments) {
+        if (time >= segment.start && time < segment.end) {
+          activeSegment = segment;
+          break;
+        }
+      }
+    }
+    setShowSkipButton(activeSegment);
+
     setCurrentTime(time);
     if (onProgress) {
       onProgress(time, totalDuration);
+    }
+  };
+
+  const handleSkip = () => {
+    if (showSkipButton && videoRef.current) {
+      videoRef.current.currentTime = showSkipButton.end;
+      setShowSkipButton(null);
     }
   };
 
@@ -217,6 +239,12 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
         onLoadedMetadata={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          if (hasNext && onNext) {
+            onNext();
+          }
+        }}
         style={{ 
           position: 'absolute',
           top: 0,
@@ -234,6 +262,35 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
             <path d="M8 5v14l11-7z"/>
           </svg>
         </div>
+      )}
+
+      {/* Skip Button */}
+      {showSkipButton && (
+        <button 
+          className="skip-btn"
+          onClick={handleSkip}
+          style={{
+            position: 'absolute',
+            bottom: '80px',
+            right: '20px',
+            padding: '10px 20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            zIndex: 20,
+            backdropFilter: 'blur(5px)',
+            fontWeight: 'bold',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {showSkipButton.label || "Bỏ qua"} 
+          <svg viewBox="0 0 24 24" fill="white" width="16" height="16"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+        </button>
       )}
 
       {/* Custom Controls Bar */}
@@ -262,6 +319,18 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
                 <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M8 5v14l11-7z"/></svg>
               )}
             </button>
+            
+            {/* Prev/Next Buttons */}
+            {hasPrev && (
+              <button className="control-btn" onClick={onPrev} title="Tập trước">
+                <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+              </button>
+            )}
+            {hasNext && (
+              <button className="control-btn" onClick={onNext} title="Tập tiếp theo">
+                <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+              </button>
+            )}
             
             <div className="volume-control">
               <button className="control-btn" onClick={toggleMute}>
