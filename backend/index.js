@@ -22,6 +22,11 @@ sequelize.sync({ alter: true }).then(() => {
 app.use(cors());
 app.use(express.json());
 
+// Health Check
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
+
 // Middleware to authenticate JWT
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
