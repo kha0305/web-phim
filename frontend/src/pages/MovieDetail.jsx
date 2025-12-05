@@ -23,23 +23,62 @@ const MovieDetail = () => {
   const [initialProgress, setInitialProgress] = useState(0);
 
   const saveHistory = React.useCallback(async () => {
-    if (user && startTimeRef.current) {
+    if (startTimeRef.current) {
       const duration = Math.round((Date.now() - startTimeRef.current) / 1000 / 60); // minutes
       // Only save if watched for at least 1 minute OR if progress > 10s (to capture resume point)
       if (duration < 1 && progressRef.current < 10) return; 
       
-      try {
-        await axios.post('/history', { 
-          userId: user.id, 
+      if (user) {
+        try {
+          await axios.post('/history', { 
+            userId: user.id, 
+            movieId: id,
+            duration: duration,
+            progress: Math.floor(progressRef.current)
+          });
+        } catch (error) {
+          console.error("Failed to save history:", error);
+        }
+      } else {
+        // Save to localStorage for non-logged in users
+        const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+        const existingIndex = localHistory.findIndex(h => h.movieId === id || h.slug === id);
+        
+        const historyItem = {
           movieId: id,
-          duration: duration,
-          progress: Math.floor(progressRef.current)
-        });
-      } catch (error) {
-        console.error("Failed to save history:", error);
+          slug: movie?.slug || id,
+          name: movie?.name,
+          poster_url: movie?.poster_url || movie?.thumb_url,
+          durationWatched: duration, // approximate total minutes watched this session
+          progress: Math.floor(progressRef.current), // resume point in seconds
+          timestamp: Date.now(),
+          // Store minimal movie data for display
+          year: movie?.year,
+          time: movie?.time,
+          episode_current: movie?.episode_current,
+          quality: movie?.quality,
+          lang: movie?.lang
+        };
+
+        if (existingIndex !== -1) {
+          // Update existing, keep the max duration if we want cumulative, but usually we just want "last watched" status
+          // For resume point (progress), we always update.
+          // For durationWatched, we might want to add up? For now let's just update the "last watched" info.
+          localHistory[existingIndex] = {
+             ...localHistory[existingIndex],
+             ...historyItem,
+             durationWatched: (localHistory[existingIndex].durationWatched || 0) + duration
+          };
+        } else {
+          localHistory.unshift(historyItem);
+        }
+        
+        // Limit to 20 items
+        const trimmedHistory = localHistory.slice(0, 20);
+        localStorage.setItem('watchHistory', JSON.stringify(trimmedHistory));
       }
     }
-  }, [user, id]);
+  }, [user, id, movie]);
 
   const handleClosePlayer = React.useCallback(async () => {
     await saveHistory();
@@ -54,7 +93,7 @@ const MovieDetail = () => {
   // Auto-save history every 5 minutes and on unmount
   useEffect(() => {
     let interval;
-    if (showPlayer && user) {
+    if (showPlayer) {
       interval = setInterval(() => {
         saveHistory();
       }, 5 * 60 * 1000);
@@ -63,7 +102,7 @@ const MovieDetail = () => {
       if (interval) clearInterval(interval);
       if (showPlayer) saveHistory();
     };
-  }, [showPlayer, user, saveHistory]);
+  }, [showPlayer, saveHistory]);
 
   useEffect(() => {
     const fetchMovieDetail = async () => {
@@ -169,6 +208,17 @@ const MovieDetail = () => {
         savedProgress = res.data.progress || 0;
       } catch (e) {
         console.error("Failed to fetch progress", e);
+      }
+    } else {
+      // Fetch from localStorage
+      try {
+        const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+        const item = localHistory.find(h => h.movieId === id || h.slug === id);
+        if (item) {
+          savedProgress = item.progress || 0;
+        }
+      } catch (e) {
+        console.error("Failed to read local history", e);
       }
     }
     

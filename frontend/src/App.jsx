@@ -16,6 +16,7 @@ const Register = React.lazy(() => import('./pages/Register'));
 const History = React.lazy(() => import('./pages/History'));
 const Watchlist = React.lazy(() => import('./pages/Watchlist'));
 const Profile = React.lazy(() => import('./pages/Profile'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 
 const LoadingFallback = () => (
   <div className="loading-container">
@@ -36,6 +37,7 @@ function App() {
               <Route path="/movie/:id" element={<MovieDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/history" element={<History />} />
               <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/profile" element={<Profile />} />

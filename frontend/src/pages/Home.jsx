@@ -55,6 +55,16 @@ const Home = () => {
         }
       };
       fetchUserData();
+    } else if (!user && !searchQuery && !genreParam && !typeParam) {
+      // Load history from localStorage for non-logged in users
+      try {
+        const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+        setHistory(localHistory.slice(0, 10));
+        setWatchlist([]); // No local watchlist for now
+      } catch (e) {
+        console.error("Error loading local history:", e);
+        setHistory([]);
+      }
     } else {
       setHistory([]);
       setWatchlist([]);

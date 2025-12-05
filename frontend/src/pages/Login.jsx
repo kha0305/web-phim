@@ -48,6 +48,9 @@ const Login = () => {
         <button type="submit" className="btn btn-primary">{t('login_button')}</button>
       </form>
       <p style={{ marginTop: '1rem', textAlign: 'center', color: '#aaa' }}>
+        <Link to="/forgot-password" style={{ color: '#aaa', fontSize: '0.9rem' }}>Forgot Password?</Link>
+      </p>
+      <p style={{ marginTop: '0.5rem', textAlign: 'center', color: '#aaa' }}>
         {t('dont_have_account')} <Link to="/register" style={{ color: '#e50914' }}>{t('register')}</Link>
       </p>
     </div>

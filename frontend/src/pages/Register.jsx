@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 const Register = () => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -15,7 +16,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/auth/register', { username, password });
+      const response = await axios.post('/auth/register', { username, email, password });
       login(response.data.user, response.data.token);
       navigate('/');
     } catch (err) {
@@ -35,6 +36,16 @@ const Register = () => {
           onChange={(e) => setUsername(e.target.value)}
           className="search-input"
           style={{ width: '100%' }}
+          required
+        />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="search-input"
+          style={{ width: '100%' }}
+          required
         />
         <input
           type="password"
@@ -43,6 +54,7 @@ const Register = () => {
           onChange={(e) => setPassword(e.target.value)}
           className="search-input"
           style={{ width: '100%' }}
+          required
         />
         <button type="submit" className="btn btn-primary">{t('register_button')}</button>
       </form>

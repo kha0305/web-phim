@@ -12,11 +12,24 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem('videoVolume');
+    return saved !== null ? parseFloat(saved) : 1;
+  });
+  const [isMuted, setIsMuted] = useState(() => {
+    const saved = localStorage.getItem('videoVolume');
+    return saved !== null ? parseFloat(saved) === 0 : false;
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef(null);
+
+  // Apply volume on mount
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+    }
+  }, []);
 
   // Initialize HLS
   useEffect(() => {
@@ -39,6 +52,8 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
         if (initialTime > 0) {
            videoRef.current.currentTime = initialTime;
         }
+        // Ensure volume is applied after HLS attach
+        videoRef.current.volume = volume;
       });
       
       hls.on(Hls.Events.ERROR, function (event, data) {
@@ -61,6 +76,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
       if (initialTime > 0) {
         videoRef.current.currentTime = initialTime;
       }
+      videoRef.current.volume = volume;
     }
 
     return () => {
@@ -136,6 +152,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
     setVolume(vol);
     videoRef.current.volume = vol;
     setIsMuted(vol === 0);
+    localStorage.setItem('videoVolume', vol);
   };
 
   const toggleMute = () => {

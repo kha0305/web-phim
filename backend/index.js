@@ -68,23 +68,74 @@ const fetchFromAPI = async (url) => {
 
 // --- AUTH ROUTES ---
 
+const nodemailer = require('nodemailer');
+
+// Email Transporter Configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Or use 'smtp.gmail.com' directly
+  auth: {
+    user: process.env.EMAIL_USER, // Your email address
+    pass: process.env.EMAIL_PASS  // Your email password or app-specific password
+  }
+});
+
+// Helper to send welcome email
+const sendWelcomeEmail = async (email, username) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("Email credentials not found. Skipping welcome email.");
+    return;
+  }
+
+  const mailOptions = {
+    from: `"PhimChill Team" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Welcome to PhimChill! 🎉',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #e50914; text-align: center;">Welcome to PhimChill, ${username}!</h2>
+        <p>Thank you for joining our community. We are excited to have you on board.</p>
+        <p>Start exploring thousands of movies and TV shows right now!</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://phimchill.vercel.app" style="background-color: #e50914; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Start Watching</a>
+        </div>
+        <p style="color: #888; font-size: 12px; text-align: center;">If you did not create this account, please ignore this email.</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Welcome email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending welcome email:", error);
+  }
+};
+
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+    const { username, password, email } = req.body;
+    if (!username || !password || !email) return res.status(400).json({ error: "Missing fields" });
     
     const existingUser = await User.findOne({ where: { username } });
     if (existingUser) {
       return res.status(400).json({ error: "Username already exists" });
     }
 
+    const existingEmail = await User.findOne({ where: { email } });
+    if (existingEmail) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ username, password: hashedPassword });
+    const newUser = await User.create({ username, password: hashedPassword, email });
+
+    // Send Welcome Email asynchronously (don't block response)
+    sendWelcomeEmail(email, username);
 
     const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET);
 
     res.json({ 
-      user: { id: newUser.id, username: newUser.username },
+      user: { id: newUser.id, username: newUser.username, email: newUser.email },
       token 
     });
   } catch (error) {
@@ -112,6 +163,117 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Login failed" });
+  }
+});
+
+const { Otp } = require('./models');
+
+// Generate Random 6-digit OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send OTP Email
+const sendOtpEmail = async (email, otp) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+
+  const mailOptions = {
+    from: `"PhimChill Security" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Password Reset OTP',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #e50914; text-align: center;">Password Reset Request</h2>
+        <p>You requested to reset your password. Use the code below to proceed:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="background-color: #f4f4f4; padding: 10px 20px; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 5px;">${otp}</span>
+        </div>
+        <p style="color: #888; font-size: 12px; text-align: center;">This code will expire in 10 minutes.</p>
+      </div>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+// 1. Forgot Password - Send OTP
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Remove existing OTPs for this email
+    await Otp.destroy({ where: { email } });
+
+    // Save new OTP
+    await Otp.create({ email, otp, expiresAt });
+
+    // Send Email
+    await sendOtpEmail(email, otp);
+
+    res.json({ success: true, message: "OTP sent to email" });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// 2. Verify OTP
+app.post("/api/auth/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Missing fields" });
+
+    const record = await Otp.findOne({ where: { email, otp } });
+    
+    if (!record) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    if (new Date() > record.expiresAt) {
+      return res.status(400).json({ error: "OTP expired" });
+    }
+
+    res.json({ success: true, message: "OTP verified" });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    res.status(500).json({ error: "Verification failed" });
+  }
+});
+
+// 3. Reset Password
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
+
+    // Verify OTP again to be safe
+    const record = await Otp.findOne({ where: { email, otp } });
+    if (!record || new Date() > record.expiresAt) {
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+
+    // Update Password
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    // Delete used OTP
+    await record.destroy();
+
+    res.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Failed to reset password" });
   }
 });
 

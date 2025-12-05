@@ -14,6 +14,14 @@ const User = sequelize.define('User', {
   avatar: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: true, // Allow null for existing users, but we should enforce it for new ones
+    unique: true,
+    validate: {
+      isEmail: true
+    }
   }
 });
 
@@ -107,11 +115,28 @@ const Watchlist = sequelize.define('Watchlist', {
   ]
 });
 
+// ... existing code ...
+const Otp = sequelize.define('Otp', {
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  otp: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  expiresAt: {
+    type: DataTypes.DATE,
+    allowNull: false
+  }
+});
+
 // Relationships
 User.hasMany(History, { foreignKey: 'userId' });
+// ... existing code ...
 History.belongsTo(User, { foreignKey: 'userId' });
 
 User.hasMany(Watchlist, { foreignKey: 'userId' });
 Watchlist.belongsTo(User, { foreignKey: 'userId' });
 
-module.exports = { User, History, View, Watchlist, sequelize };
+module.exports = { User, History, View, Watchlist, Otp, sequelize };
