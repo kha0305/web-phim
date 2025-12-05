@@ -29,7 +29,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
     if (videoRef.current) {
       videoRef.current.volume = volume;
     }
-  }, []);
+  }, [volume]);
 
   // Initialize HLS
   useEffect(() => {
@@ -82,6 +82,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
     return () => {
       if (hls) hls.destroy();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, initialTime]);
 
   // Controls Visibility Logic
@@ -128,9 +129,10 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
 
   const handleTimeUpdate = () => {
     const time = videoRef.current.currentTime;
+    const totalDuration = videoRef.current.duration;
     setCurrentTime(time);
     if (onProgress) {
-      onProgress(time);
+      onProgress(time, totalDuration);
     }
   };
 

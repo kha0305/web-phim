@@ -88,7 +88,11 @@ const History = () => {
                    color: '#ffc107',
                    fontWeight: '500'
                  }}>
-                   ⏱ {movie.durationWatched ? `${t('watched')} ${formatDuration(movie.durationWatched)}` : t('just_started')}
+                   ⏱ {movie.durationWatched ? (
+                     movie.durationTotal ? 
+                     `${formatDuration(movie.durationWatched)} / ${formatDuration(movie.durationTotal)}` : 
+                     `${t('watched')} ${formatDuration(movie.durationWatched)}`
+                   ) : t('just_started')}
                  </div>
                </div>
             </div>

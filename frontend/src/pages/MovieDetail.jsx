@@ -20,6 +20,7 @@ const MovieDetail = () => {
   const { t, language } = useLanguage();
   const startTimeRef = useRef(null);
   const progressRef = useRef(0);
+  const totalDurationRef = useRef(0);
   const [initialProgress, setInitialProgress] = useState(0);
 
   const saveHistory = React.useCallback(async () => {
@@ -34,7 +35,8 @@ const MovieDetail = () => {
             userId: user.id, 
             movieId: id,
             duration: duration,
-            progress: Math.floor(progressRef.current)
+            progress: Math.floor(progressRef.current),
+            durationTotal: Math.floor(totalDurationRef.current)
           });
         } catch (error) {
           console.error("Failed to save history:", error);
@@ -49,8 +51,9 @@ const MovieDetail = () => {
           slug: movie?.slug || id,
           name: movie?.name,
           poster_url: movie?.poster_url || movie?.thumb_url,
-          durationWatched: duration, // approximate total minutes watched this session
+          durationWatched: duration, // approximate total seconds watched this session
           progress: Math.floor(progressRef.current), // resume point in seconds
+          durationTotal: Math.floor(totalDurationRef.current), // total video length in seconds
           timestamp: Date.now(),
           // Store minimal movie data for display
           year: movie?.year,
@@ -408,7 +411,10 @@ const MovieDetail = () => {
                   src={currentEpisode.link_m3u8} 
                   poster={movie.poster_url || movie.thumb_url} 
                   initialTime={initialProgress}
-                  onProgress={(time) => progressRef.current = time}
+                  onProgress={(time, totalDuration) => {
+                    progressRef.current = time;
+                    if (totalDuration) totalDurationRef.current = totalDuration;
+                  }}
                 />
               ) : (
                 <iframe
