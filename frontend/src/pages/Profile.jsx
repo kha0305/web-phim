@@ -120,7 +120,7 @@ const Profile = () => {
         {/* Header */}
         <div className="profile-header">
           <h2>
-            <span style={{ fontSize: '1.5rem' }}>🏠</span> Quản lý tài khoản
+            Quản lý tài khoản
           </h2>
         </div>
 
