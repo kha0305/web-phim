@@ -1,0 +1,24 @@
+{
+  "tmdb": {
+    "type": "series",
+    "id": null,
+    "season": null,
+    "vote_average": 0,
+    "vote_count": 0
+  },
+  "imdb": {
+    "id": "",
+    "vote_average": 0,
+    "vote_count": 0
+  },
+  "modified": {
+    "time": "2025-12-04T18:42:37.000000Z"
+  },
+  "_id": 14244,
+  "name": "Ngắm Bắn Hồ Điệp",
+  "slug": "ngam-ban-ho-diep",
+  "origin_name": "Sniper Butterfly",
+  "thumb_url": "https://img.ophim.live/uploads/movies/ngam-ban-ho-diep-thumb.jpg",
+  "poster_url": "https://img.ophim.live/uploads/movies/ngam-ban-ho-diep-poster.jpg",
+  "year": 0
+}

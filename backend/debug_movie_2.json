@@ -1,0 +1,24 @@
+{
+  "tmdb": {
+    "type": "series",
+    "id": null,
+    "season": null,
+    "vote_average": 0,
+    "vote_count": 0
+  },
+  "imdb": {
+    "id": "",
+    "vote_average": 0,
+    "vote_count": 0
+  },
+  "modified": {
+    "time": "2025-12-04T18:41:41.000000Z"
+  },
+  "_id": 13600,
+  "name": "Nụ Hôn Bùng Nổ",
+  "slug": "nu-hon-bung-no",
+  "origin_name": "Dynamite Kiss",
+  "thumb_url": "https://img.ophim.live/uploads/movies/nu-hon-bung-no-thumb.jpg",
+  "poster_url": "https://img.ophim.live/uploads/movies/nu-hon-bung-no-poster.jpg",
+  "year": 0
+}
