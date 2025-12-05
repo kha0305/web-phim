@@ -3,6 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 require("dotenv").config();
 const { User, History, View, Watchlist, Comment, Notification, sequelize } = require('./models');
+const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -851,7 +852,7 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
     
     const notifications = await Notification.findAll({
       where: { 
-        [sequelize.Op.or]: [
+        [Op.or]: [
           { userId },
           { userId: null }
         ] 
