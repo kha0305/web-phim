@@ -16,7 +16,7 @@
 - **Frontend**: Đã cập nhật để đọc `VITE_API_URL`.
 - **Backend**: Đã cập nhật để export app cho Vercel và thêm `vercel.json`.
 
-## 3. Deploy Backend lên Vercel
+## 3. Deploy Backend lên Vercel (Domain: apimovie.server.id.vn)
 
 1. Đẩy code lên GitHub.
 2. Vào [Vercel Dashboard](https://vercel.com/dashboard) -> **Add New...** -> **Project**.
@@ -28,19 +28,26 @@
    - `DB_PASSWORD`: Password của Aiven
    - `DB_NAME`: Tên database
    - `DB_PORT`: Port của Aiven
-   - `JWT_SECRET`: Điền một chuỗi bí mật bất kỳ
+   - `JWT_SECRET`: `hK9#mP2$vL5@zN8!qR3&jX6_WebPhim_Secure_2024` (hoặc chuỗi bạn chọn)
 6. Bấm **Deploy**.
-7. Sau khi deploy xong, copy **Domain** của backend (ví dụ: `https://web-phim-backend.vercel.app`).
+7. **Cấu hình Domain**:
+   - Vào tab **Settings** -> **Domains**.
+   - Thêm domain: `apimovie.server.id.vn`.
+   - Vercel sẽ cung cấp thông tin DNS (thường là CNAME `cname.vercel-dns.com`). Bạn cần vào trang quản lý tên miền của bạn để cấu hình record này.
 
-## 4. Deploy Frontend lên Vercel
+## 4. Deploy Frontend lên Vercel (Domain: movie.server.id.vn)
 
 1. Vào Vercel Dashboard -> **Add New...** -> **Project**.
 2. Chọn lại repo cũ.
 3. **Quan trọng**: Tại phần **Root Directory**, bấm **Edit** và chọn thư mục `frontend`.
 4. Tại phần **Environment Variables**, thêm biến:
-   - `VITE_API_URL`: Dán domain của backend vào (ví dụ: `https://web-phim-backend.vercel.app/api`)
-     _Lưu ý: Thêm `/api` vào cuối nếu backend route bắt đầu bằng `/api`._
+   - `VITE_API_URL`: `https://apimovie.server.id.vn/api`
+     _(Lưu ý: Phải chính xác là domain backend bạn vừa cài đặt)_
 5. Bấm **Deploy**.
+6. **Cấu hình Domain**:
+   - Vào tab **Settings** -> **Domains**.
+   - Thêm domain: `movie.server.id.vn`.
+   - Cấu hình DNS tương tự như backend.
 
 ## Lưu ý quan trọng
 

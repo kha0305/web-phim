@@ -117,9 +117,14 @@ const fs = require('fs');
 // ...
 
 // Ensure uploads directory exists
+// Ensure uploads directory exists (Only locally)
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
+  try {
+    fs.mkdirSync(uploadDir);
+  } catch (err) {
+    console.warn("Could not create uploads directory:", err.message);
+  }
 }
 
 // Configure Multer
