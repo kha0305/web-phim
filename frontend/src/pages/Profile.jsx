@@ -45,8 +45,8 @@ const Profile = () => {
     const fetchStats = async () => {
       try {
         const [watchlistRes, historyRes] = await Promise.all([
-          axios.get('/user/watchlist'),
-          axios.get('/user/history')
+          axios.get(`/watchlist/${user.id}`),
+          axios.get(`/history/${user.id}`)
         ]);
         setStats({
           watchlistCount: watchlistRes.data.length || 0,

@@ -104,7 +104,7 @@ const Navbar = () => {
         </Link>
         
         <div className="search-container">
-          <img src="/search-icon.png" alt="Search" className="search-icon" style={{width: '20px', height: '20px', filter: 'brightness(0) invert(1)'}} />
+
           <form onSubmit={handleSearch}>
             <input 
               ref={inputRef}

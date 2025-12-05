@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import { Analytics } from "@vercel/analytics/react";
 
 import Navbar from './components/Navbar';
 import { AuthProvider } from './context/AuthContext';
@@ -41,6 +42,7 @@ function App() {
             </Routes>
           </Suspense>
           <Footer />
+          <Analytics />
         </Router>
       </AuthProvider>
     </LanguageProvider>

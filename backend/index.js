@@ -135,11 +135,24 @@ if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
 // Configure Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    // On Vercel, use /tmp. Locally, use uploads/
+    const dest = process.env.VERCEL ? '/tmp' : 'uploads/';
+    cb(null, dest);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Manual DB Sync Route (for Vercel)
+app.get("/api/sync-db", async (req, res) => {
+  try {
+    await sequelize.sync({ alter: true });
+    res.send("Database synced successfully!");
+  } catch (error) {
+    console.error("Sync error:", error);
+    res.status(500).send("Failed to sync database: " + error.message);
   }
 });
 
