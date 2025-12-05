@@ -81,8 +81,9 @@ const transporter = nodemailer.createTransport({
 
 // Helper to send welcome email
 const sendWelcomeEmail = async (email, username) => {
+  console.log("Attempting to send welcome email to:", email);
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("Email credentials not found. Skipping welcome email.");
+    console.error("Email credentials missing in .env! EMAIL_USER or EMAIL_PASS is not set.");
     return;
   }
 
@@ -96,7 +97,7 @@ const sendWelcomeEmail = async (email, username) => {
         <p>Thank you for joining our community. We are excited to have you on board.</p>
         <p>Start exploring thousands of movies and TV shows right now!</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://phimchill.vercel.app" style="background-color: #e50914; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Start Watching</a>
+          <a href="https://movie.server.id.vn" style="background-color: #e50914; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Start Watching</a>
         </div>
         <p style="color: #888; font-size: 12px; text-align: center;">If you did not create this account, please ignore this email.</p>
       </div>
@@ -104,8 +105,8 @@ const sendWelcomeEmail = async (email, username) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Welcome email sent to ${email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Welcome email sent: ${info.messageId}`);
   } catch (error) {
     console.error("Error sending welcome email:", error);
   }
@@ -175,7 +176,11 @@ const generateOTP = () => {
 
 // Send OTP Email
 const sendOtpEmail = async (email, otp) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+  console.log("Attempting to send OTP email to:", email);
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("Email credentials missing for OTP!");
+    return;
+  }
 
   const mailOptions = {
     from: `"PhimChill Security" <${process.env.EMAIL_USER}>`,
@@ -193,7 +198,12 @@ const sendOtpEmail = async (email, otp) => {
     `
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent: ${info.messageId}`);
+  } catch (error) {
+    console.error("Error sending OTP email:", error);
+  }
 };
 
 // 1. Forgot Password - Send OTP
