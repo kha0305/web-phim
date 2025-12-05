@@ -3,39 +3,42 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
-import '../profile.css';
+import './ProfileNew.css'; // Import new CSS
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    watchlistCount: 0,
-    historyCount: 0
-  });
-  // const [loading, setLoading] = useState(true); // Unused
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editAvatar, setEditAvatar] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
 
-  // Email Change State
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [activeTab, setActiveTab] = useState('info'); // 'info' or 'password'
+  
+  // Info State
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('other');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  
+  // Password State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // UI State
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (user) {
-      setEditName(user.username);
-      setEditAvatar(user.avatar || '');
+      setDisplayName(user.username || '');
+      setEmail(user.email || '');
+      setGender(user.gender || 'other');
       setPreviewUrl(user.avatar || '');
-      setNewEmail(user.email || '');
+    } else {
+      navigate('/login');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -45,312 +48,256 @@ const Profile = () => {
     }
   };
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    const fetchStats = async () => {
-      try {
-        const [watchlistRes, historyRes] = await Promise.all([
-          axios.get(`/watchlist/${user.id}`),
-          axios.get(`/history/${user.id}`)
-        ]);
-        setStats({
-          watchlistCount: watchlistRes.data.length || 0,
-          historyCount: historyRes.data.length || 0
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      }
-    };
-
-    fetchStats();
-  }, [user, navigate]);
-
-  const handleUpdateProfile = async () => {
-    if (!editName.trim()) return;
+  const handleUpdateInfo = async () => {
+    setLoading(true);
+    setMessage('');
+    setError('');
     
     try {
       const formData = new FormData();
-      formData.append('username', editName);
+      formData.append('username', displayName);
+      formData.append('gender', gender);
       if (selectedFile) {
         formData.append('avatar', selectedFile);
-      } else if (editAvatar !== user.avatar) {
-         formData.append('avatarUrl', editAvatar);
       }
 
       const response = await axios.put('/user/profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
         updateUser(response.data.user);
-        setIsEditing(false);
+        setMessage('Cập nhật thông tin thành công!');
         setSelectedFile(null);
       }
-    } catch (error) {
-      console.error("Update failed:", error);
-      alert("Failed to update profile");
+    } catch (err) {
+      console.error(err);
+      setError('Cập nhật thất bại. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRequestEmailChange = async () => {
-    if (!newEmail || newEmail === user.email) return;
-    setEmailError('');
-    setEmailMessage('');
-    try {
-      await axios.post('/user/request-email-change', { newEmail });
-      setShowOtpModal(true);
-      setEmailMessage('OTP sent to ' + newEmail);
-    } catch (error) {
-      setEmailError(error.response?.data?.error || 'Failed to send OTP');
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp');
+      return;
     }
-  };
+    if (newPassword.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
 
-  const handleVerifyEmailChange = async () => {
-    if (!otp) return;
-    setEmailError('');
-    setEmailMessage('');
+    setLoading(true);
+    setMessage('');
+    setError('');
+
     try {
-      const response = await axios.post('/user/verify-email-change', { newEmail, otp });
-      updateUser(response.data.user);
-      setShowOtpModal(false);
-      setIsEditingEmail(false);
-      setOtp('');
-      alert('Email updated successfully!');
-    } catch (error) {
-      setEmailError(error.response?.data?.error || 'Invalid OTP');
+      const response = await axios.post('/user/change-password', {
+        currentPassword,
+        newPassword
+      });
+
+      if (response.data.success) {
+        setMessage('Đổi mật khẩu thành công!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Đổi mật khẩu thất bại');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!user) return null;
 
   return (
-    <div className="container" style={{ marginTop: '100px', minHeight: '80vh' }}>
-      <div className="profile-container">
-        {/* Profile Header / Card */}
-        <div className="profile-card">
-          <div className="profile-header-bg"></div>
-          <div className="profile-content">
-            <div className="profile-avatar-wrapper">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Avatar" className="profile-avatar-img" style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid var(--surface-color)'
-                }} 
-                onError={(e) => {
-                  e.target.onerror = null; 
-                  e.target.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
-                }}
-                />
-              ) : (
-                <div className="profile-avatar">
-                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
-              {isEditing && (
-                 <label htmlFor="avatar-upload" style={{
-                    position: 'absolute',
-                    bottom: '0',
-                    right: '0',
-                    background: 'var(--primary-color)',
-                    borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                 }}>
-                    📷
-                    <input 
-                      id="avatar-upload"
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                 </label>
-              )}
-            </div>
-            
-            <div className="profile-info">
-              {isEditing ? (
-                <div style={{ width: '100%' }}>
-                  <input 
-                    type="text" 
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="profile-name-input"
-                    placeholder="Username"
-                    style={{
-                      fontSize: '1.5rem',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '2px solid var(--primary-color)',
-                      color: 'white',
-                      marginBottom: '1rem',
-                      width: '100%',
-                      outline: 'none'
-                    }}
-                  />
-                  <input 
-                    type="text" 
-                    value={editAvatar}
-                    onChange={(e) => {
-                        setEditAvatar(e.target.value);
-                        setPreviewUrl(e.target.value);
-                    }}
-                    className="profile-avatar-input"
-                    placeholder="Or paste Avatar URL..."
-                    style={{
-                      fontSize: '0.9rem',
-                      background: 'rgba(255,255,255,0.1)',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '0.5rem',
-                      color: 'white',
-                      marginBottom: '0.5rem',
-                      width: '100%',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              ) : (
-                <h1 className="profile-name">{user.username}</h1>
-              )}
-              
-              {/* Email Section */}
-              <div className="profile-email-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-                {isEditingEmail ? (
-                  <>
-                    <input 
-                      type="email" 
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      style={{
-                        background: 'rgba(255,255,255,0.1)',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        padding: '5px 10px',
-                        color: 'white',
-                        outline: 'none'
-                      }}
-                    />
-                    <button onClick={handleRequestEmailChange} className="btn-sm btn-primary">Verify</button>
-                    <button onClick={() => { setIsEditingEmail(false); setNewEmail(user.email || ''); }} className="btn-sm btn-outline">Cancel</button>
-                  </>
-                ) : (
-                  <>
-                    <p className="profile-email">{user.email || 'No email set'}</p>
-                    <button onClick={() => setIsEditingEmail(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }}>✏️</button>
-                  </>
-                )}
-              </div>
-              {emailError && <p style={{ color: 'red', fontSize: '0.8rem' }}>{emailError}</p>}
-              {emailMessage && <p style={{ color: 'green', fontSize: '0.8rem' }}>{emailMessage}</p>}
+    <div className="profile-page-container">
+      <div className="profile-card-wrapper">
+        {/* Header */}
+        <div className="profile-header">
+          <h2>
+            <span style={{ fontSize: '1.5rem' }}>🏠</span> Quản lý tài khoản
+          </h2>
+        </div>
 
-              {/* OTP Modal */}
-              {showOtpModal && (
-                <div style={{
-                  position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-                  background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }}>
-                  <div style={{ background: '#222', padding: '20px', borderRadius: '8px', width: '300px', textAlign: 'center' }}>
-                    <h3>Verify Email</h3>
-                    <p style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '15px' }}>Enter the OTP sent to {newEmail}</p>
-                    <input 
-                      type="text" 
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="Enter OTP"
-                      style={{ width: '100%', padding: '10px', marginBottom: '15px', textAlign: 'center', fontSize: '1.2rem', letterSpacing: '2px' }}
-                    />
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                      <button onClick={handleVerifyEmailChange} className="btn btn-primary">Confirm</button>
-                      <button onClick={() => setShowOtpModal(false)} className="btn btn-outline">Close</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="profile-badges">
-                <span className="profile-badge member-badge">Member</span>
-                {/* <span className="profile-badge vip-badge">VIP</span> */}
-              </div>
-            </div>
-
-            <div className="profile-actions">
-              {isEditing ? (
-                <>
-                  <button className="btn btn-primary" onClick={handleUpdateProfile}>
-                    {t('save')}
-                  </button>
-                  <button className="btn btn-outline" onClick={() => {
-                    setIsEditing(false);
-                    setEditName(user.username);
-                    setEditAvatar(user.avatar || '');
-                    setPreviewUrl(user.avatar || '');
-                    setSelectedFile(null);
-                  }}>
-                    {t('cancel')}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
-                    {t('edit_profile')}
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Tabs */}
+        <div className="profile-tabs">
+          <div 
+            className={`profile-tab ${activeTab === 'info' ? 'active' : ''}`}
+            onClick={() => setActiveTab('info')}
+          >
+            Thông tin
           </div>
-
-          {/* Stats Grid */}
-          <div className="profile-stats-grid">
-            <div className="stat-card" onClick={() => navigate('/watchlist')}>
-              <div className="stat-icon">📑</div>
-              <div className="stat-number">{stats.watchlistCount}</div>
-              <div className="stat-label">{t('my_watchlist')}</div>
-            </div>
-            <div className="stat-card" onClick={() => navigate('/history')}>
-              <div className="stat-icon">🕒</div>
-              <div className="stat-number">{stats.historyCount}</div>
-              <div className="stat-label">{t('history')}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">⭐</div>
-              <div className="stat-number">0</div>
-              <div className="stat-label">Reviews</div>
-            </div>
+          <div 
+            className={`profile-tab ${activeTab === 'password' ? 'active' : ''}`}
+            onClick={() => setActiveTab('password')}
+          >
+            Mật khẩu
           </div>
         </div>
 
-        {/* Recent Activity Section (Placeholder) */}
-        <div className="profile-section">
-          <h2 className="section-title">Account Settings</h2>
-          <div className="settings-grid">
-             <div className="setting-item">
-                <div className="setting-info">
-                    <h3>Email Notifications</h3>
-                    <p>Receive updates about new movies and episodes</p>
+        {/* Body */}
+        <div className="profile-content-body">
+          {message && <div style={{ color: '#4caf50', marginBottom: '1rem' }}>{message}</div>}
+          {error && <div style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</div>}
+
+          {activeTab === 'info' && (
+            <div>
+              <h3 className="section-title">Cập nhật thông tin tài khoản</h3>
+              <div className="profile-form-grid">
+                {/* Left Column */}
+                <div className="form-column-left">
+                  <div className="form-group">
+                    <label>Tên hiển thị</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input 
+                      type="email" 
+                      className="form-input" 
+                      value={email}
+                      disabled // Email change is handled separately or not allowed here directly
+                      style={{ opacity: 0.7 }}
+                    />
+                    {/* Optional: Add link to change email if needed */}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Giới tính</label>
+                    <div className="gender-options">
+                      <label className="gender-option">
+                        <input 
+                          type="radio" 
+                          name="gender" 
+                          value="male"
+                          checked={gender === 'male'}
+                          onChange={(e) => setGender(e.target.value)}
+                          className="gender-radio"
+                        />
+                        Nam
+                      </label>
+                      <label className="gender-option">
+                        <input 
+                          type="radio" 
+                          name="gender" 
+                          value="female"
+                          checked={gender === 'female'}
+                          onChange={(e) => setGender(e.target.value)}
+                          className="gender-radio"
+                        />
+                        Nữ
+                      </label>
+                      <label className="gender-option">
+                        <input 
+                          type="radio" 
+                          name="gender" 
+                          value="other"
+                          checked={gender === 'other'}
+                          onChange={(e) => setGender(e.target.value)}
+                          className="gender-radio"
+                        />
+                        Không xác định
+                      </label>
+                    </div>
+                  </div>
+
+                  <button className="btn-yellow" onClick={handleUpdateInfo} disabled={loading}>
+                    {loading ? 'Đang cập nhật...' : 'Cập nhật'}
+                  </button>
                 </div>
-                <div className="toggle-switch active"></div>
-             </div>
-             <div className="setting-item">
-                <div className="setting-info">
-                    <h3>Autoplay</h3>
-                    <p>Autoplay next episode</p>
+
+                {/* Right Column (Avatar) */}
+                <div className="avatar-section">
+                  <div className="avatar-preview">
+                    {previewUrl ? (
+                      <img src={previewUrl} alt="Avatar" onError={(e) => {
+                        e.target.onerror = null; 
+                        e.target.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
+                      }} />
+                    ) : (
+                      <div className="avatar-placeholder">
+                        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <label className="upload-btn">
+                    <span>⬆️</span> Tải lên
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }} 
+                    />
+                  </label>
+                  
+                  <button className="available-btn">
+                    📷 Ảnh có sẵn
+                  </button>
                 </div>
-                <div className="toggle-switch active"></div>
-             </div>
-          </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'password' && (
+            <div>
+              <h3 className="section-title">Thay đổi mật khẩu tài khoản</h3>
+              <div className="password-grid">
+                <div className="form-column-left">
+                  <div className="form-group">
+                    <label>Mật khẩu hiện tại</label>
+                    <input 
+                      type="password" 
+                      className="form-input" 
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Mật khẩu mới</label>
+                    <input 
+                      type="password" 
+                      className="form-input" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Xác nhận mật khẩu</label>
+                    <input 
+                      type="password" 
+                      className="form-input" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                  
+                  <button className="btn-yellow" onClick={handleChangePassword} disabled={loading}>
+                    {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+                  </button>
+                </div>
+
+                <div className="password-requirements">
+                  <ul>
+                    <li>Sử dụng tối thiểu 6 ký tự và tối đa 30 ký tự</li>
+                    <li>Bao gồm số, chữ thường, chữ in hoa và ký tự đặc biệt</li>
+                    <li>Không được chứa khoảng trắng</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

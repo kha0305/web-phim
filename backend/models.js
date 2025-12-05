@@ -22,6 +22,11 @@ const User = sequelize.define('User', {
     validate: {
       isEmail: true
     }
+  },
+  gender: {
+    type: DataTypes.STRING, // 'male', 'female', 'other'
+    allowNull: true,
+    defaultValue: 'other'
   }
 });
 

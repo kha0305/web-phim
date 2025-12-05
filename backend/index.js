@@ -328,7 +328,7 @@ app.get("/api/sync-db", async (req, res) => {
 
 app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
-    const { username } = req.body;
+    const { username, gender } = req.body;
     const userId = req.user.id;
 
     if (!username) return res.status(400).json({ error: "Username is required" });
@@ -337,6 +337,7 @@ app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (
     if (!user) return res.status(404).json({ error: "User not found" });
 
     user.username = username;
+    if (gender) user.gender = gender;
     
     if (req.file) {
       // Check for token
@@ -364,10 +365,39 @@ app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (
     
     await user.save();
 
-    res.json({ success: true, user: { id: user.id, username: user.username, avatar: user.avatar } });
+    res.json({ success: true, user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar, gender: user.gender } });
   } catch (error) {
     console.error("Update profile error:", error);
     res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Change Password Route
+app.post("/api/user/change-password", authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Incorrect current password" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({ error: "Failed to change password" });
   }
 });
 
