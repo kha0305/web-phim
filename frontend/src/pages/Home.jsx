@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 import MovieCard from '../components/MovieCard';
 import SkeletonCard from '../components/SkeletonCard';
+import HistoryCard from '../components/HistoryCard';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { getMovieYear } from '../utils/movieUtils';
 
 const Home = () => {
   const [movies, setMovies] = useState([]);
@@ -260,7 +262,7 @@ const Home = () => {
               
               <div className="hero-meta">
                 <span className="year-badge">
-                  {featuredMovie.year || (featuredMovie.release_date ? new Date(featuredMovie.release_date).getFullYear() : 'N/A')}
+                  {getMovieYear(featuredMovie) || 'N/A'}
                 </span>
                 <span className="quality-badge">{featuredMovie.quality || 'HD'}</span>
                 {featuredMovie.category && (
@@ -331,13 +333,11 @@ const Home = () => {
             
             {/* Continue Watching Section */}
             {history.length > 0 && (
-              <div style={{ marginBottom: '3rem' }}>
+              <div className="continue-watching-section">
                 <h2 className="section-title">{t('watch_history')}</h2>
-                <div className="movie-grid">
+                <div className="horizontal-scroll-container">
                   {history.map(movie => (
-                    <div key={movie._id || movie.id}>
-                      <MovieCard movie={movie} priority={true} />
-                    </div>
+                    <HistoryCard key={movie.movieId || movie._id || movie.id} movie={movie} />
                   ))}
                 </div>
               </div>
@@ -427,49 +427,7 @@ const Home = () => {
                             const episode = movie.episode_current || '';
                             const metaText = [episode, duration].filter(Boolean).join(' • ');
                             
-                            let year = movie.year;
-                            if (!year && movie.category) {
-                              const yearCat = movie.category.find(cat => cat.name && /\b\d{4}\b/.test(cat.name));
-                              if (yearCat) {
-                                const match = yearCat.name.match(/(\d{4})/);
-                                if (match) year = match[1];
-                              }
-                            }
-                            
-                            const getYearFromDate = (dateString) => {
-                              if (!dateString) return null;
-                              const date = new Date(dateString);
-                              return isNaN(date.getTime()) ? null : date.getFullYear();
-                            };
-
-                            if (!year) year = getYearFromDate(movie.publish_date);
-                            if (!year) year = getYearFromDate(movie.release_date);
-                            
-                            // Regex from title/slug (Higher priority than update times)
-                            if (!year) {
-                              const titleYearMatch = movie.name ? movie.name.match(/\((\d{4})\)/) : null;
-                              const slugYearMatch = movie.slug ? movie.slug.match(/-(\d{4})/) : null;
-                              const originYearMatch = movie.origin_name ? movie.origin_name.match(/\b(\d{4})\b/) : null;
-                              
-                              if (titleYearMatch) {
-                                year = titleYearMatch[1];
-                              } else if (slugYearMatch) {
-                                year = slugYearMatch[1];
-                              } else if (originYearMatch) {
-                                year = originYearMatch[1];
-                              } else if (movie.name) {
-                                const looseMatch = movie.name.match(/\b(19\d{2}|20\d{2})\b/);
-                                if (looseMatch) year = looseMatch[1];
-                              }
-                            }
-
-                            if (!year) year = getYearFromDate(movie.created_time);
-                            
-                            // Update times as last resort
-                            if (!year) year = getYearFromDate(movie.updated_time);
-                            if (!year && movie.modified && movie.modified.time) year = getYearFromDate(movie.modified.time);
-                            
-                            if (!year) year = '';
+                            const year = getMovieYear(movie);
 
                             return [metaText, year].filter(Boolean).join(' • ');
                           })()}

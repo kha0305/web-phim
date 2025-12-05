@@ -17,6 +17,7 @@ const Navbar = () => {
     return history ? JSON.parse(history) : [];
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [isIncognito, setIsIncognito] = useState(() => localStorage.getItem('isIncognito') === 'true');
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -83,9 +84,30 @@ const Navbar = () => {
   }, [query]);
 
   const saveToHistory = (searchTerm) => {
+    if (isIncognito) return; // Don't save search history in incognito mode
     const newHistory = [searchTerm, ...searchHistory.filter(h => h !== searchTerm)].slice(0, 10);
     setSearchHistory(newHistory);
     localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+  };
+
+  const removeFromHistory = (e, termToRemove) => {
+    e.stopPropagation(); // Prevent clicking the item itself
+    const newHistory = searchHistory.filter(term => term !== termToRemove);
+    setSearchHistory(newHistory);
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+  };
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('searchHistory');
+  };
+
+  const toggleIncognito = () => {
+    const newState = !isIncognito;
+    setIsIncognito(newState);
+    localStorage.setItem('isIncognito', newState);
+    // Ideally trigger an event so other tabs/components know, but for now local changes are enough for page reloads or local checks
+    window.dispatchEvent(new Event('storage')); 
   };
 
   const handleSearch = (e) => {
@@ -184,7 +206,24 @@ const Navbar = () => {
           {/* Search History */}
           {!query && showHistory && searchHistory.length > 0 && (
             <div className="search-suggestions">
-
+               <div style={{
+                 padding: '8px 12px', 
+                 fontSize: '0.8rem', 
+                 color: '#aaa', 
+                 display: 'flex', 
+                 justifyContent: 'space-between',
+                 alignItems: 'center',
+                 borderBottom: '1px solid #333'
+               }}>
+                 <span>{t('history_search') || 'Lịch sử tìm kiếm'}</span>
+                 <button 
+                    onClick={clearHistory}
+                    style={{background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.8rem', padding: 0}}
+                    className="hover-text-danger"
+                 >
+                   {t('clear_all') || 'Xóa tất cả'}
+                 </button>
+               </div>
               {searchHistory.map((term, index) => (
                 <div 
                   key={index} 
@@ -197,9 +236,24 @@ const Navbar = () => {
                   onMouseDown={(e) => e.preventDefault()}
                 >
                   <span style={{marginRight: '10px', color: '#aaa'}}>🕒</span>
-                  <div className="suggestion-info">
+                  <div className="suggestion-info" style={{flex: 1}}>
                     <div className="suggestion-title">{term}</div>
                   </div>
+                  <button 
+                    onClick={(e) => removeFromHistory(e, term)}
+                    style={{
+                      background: 'none', 
+                      border: 'none', 
+                      color: '#666', 
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      fontSize: '1.2rem',
+                      lineHeight: 1
+                    }}
+                    className="history-delete-btn"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
@@ -266,6 +320,47 @@ const Navbar = () => {
                     <Link to="/watchlist" className="nav-link" style={{padding: '0.8rem 1rem', display: 'block', color: '#ddd', transition: 'background 0.2s'}}>
                       {t('my_watchlist')}
                     </Link>
+                    
+                    <button 
+                      onClick={toggleIncognito}
+                      className="nav-link"
+                      style={{
+                        padding: '0.8rem 1rem', 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        color: '#ddd', 
+                        background: 'none', 
+                        border: 'none', 
+                        width: '100%', 
+                        cursor: 'pointer',
+                        fontSize: 'inherit'
+                      }}
+                    >
+                      <span style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        {isIncognito ? '🕵️' : '👁️'}
+                         {t('incognito_mode') || 'Chế độ ẩn danh'}
+                      </span>
+                      <div style={{
+                        width: '32px',
+                        height: '18px',
+                        background: isIncognito ? '#4caf50' : '#444',
+                        borderRadius: '10px',
+                        position: 'relative',
+                        transition: 'background 0.3s'
+                      }}>
+                        <div style={{
+                          width: '14px',
+                          height: '14px',
+                          background: 'white',
+                          borderRadius: '50%',
+                          position: 'absolute',
+                          top: '2px',
+                          left: isIncognito ? '16px' : '2px',
+                          transition: 'left 0.3s'
+                        }}></div>
+                      </div>
+                    </button>
                     <div style={{borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0.5rem 0'}}></div>
                     <button 
                       onClick={logout} 

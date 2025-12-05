@@ -1,7 +1,6 @@
 export const translations = {
   vi: {
     home: "Trang chủ",
-    history: "Xem tiếp",
     login: "Đăng nhập",
     logout: "Đăng xuất",
     popular: "Phổ biến",
@@ -104,7 +103,17 @@ export const translations = {
     "war": "Chiến Tranh",
     "documentary": "Tài Liệu",
     "mien-tay": "Miền Tây",
-    "tre-em": "Trẻ Em"
+    "tre-em": "Trẻ Em",
+    incognito_mode: "Chế độ ẩn danh",
+    history_search: "Lịch sử tìm kiếm",
+    clear_all: "Xóa tất cả",
+    clear_all_history: "Xóa tất cả lịch sử xem",
+    confirm_clear_history: "Bạn có chắc chắn muốn xóa toàn bộ lịch sử xem?",
+    history_nav_hint: "Lịch sử xem giúp bạn dễ dàng tìm lại những bộ phim dở dang.",
+    today: "Hôm nay",
+    yesterday: "Hôm qua",
+    older: "Cũ hơn",
+    remove_from_history: "Xóa khỏi lịch sử"
   },
   en: {
     home: "Home",
@@ -194,6 +203,16 @@ export const translations = {
     "phim-chieu-rap": "Theatrical",
     "tv-shows": "TV Shows",
     "mien-tay": "Western",
-    "tre-em": "Kids"
+    "tre-em": "Kids",
+    incognito_mode: "Incognito Mode",
+    history_search: "Search History",
+    clear_all: "Clear All",
+    clear_all_history: "Clear Watch History",
+    confirm_clear_history: "Are you sure you want to clear your entire watch history?",
+    history_nav_hint: "Watch history helps you easily resume movies you started.",
+    today: "Today",
+    yesterday: "Yesterday",
+    older: "Older",
+    remove_from_history: "Remove from history"
   }
 };

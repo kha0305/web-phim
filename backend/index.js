@@ -478,16 +478,48 @@ app.get("/api/history/:userId", authenticateToken, async (req, res) => {
       order: [['watchedAt', 'DESC']]
     });
     
+    // Hybrid approach: Use cached DB data if available, otherwise fetch from API (and maybe update cache - optional)
     const detailedHistory = await Promise.all(history.map(async (item) => {
+      // 1. Fast Path: If we have cached display info, use it.
+      if (item.title) {
+         return {
+            name: item.title,
+            slug: item.movieId, // Using movieId as slug often
+            origin_name: item.title, // fallback
+            poster_url: item.poster_path,
+            thumb_url: item.poster_path, // fallback
+            year: parseInt(item.release_date) || 0,
+            watchedAt: item.watchedAt,
+            durationWatched: item.durationWatched,
+            progress: item.progress,
+            durationTotal: item.durationTotal,
+            lastEpisodeSlug: item.lastEpisodeSlug,
+            lastEpisodeName: item.lastEpisodeName
+         };
+      }
+
+      // 2. Slow Path: Legacy data (fetch from API)
       try {
         const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${item.movieId}`);
         if (data.status && data.movie) {
+             // Optional: Update DB with fetched info to speed up next time? 
+             // Ideally yes, but let's keep it simple for now or do a lazy update.
+             // Let's do a fire-and-forget update to self-repair the cache.
+             History.update({
+                title: data.movie.name,
+                poster_path: data.movie.poster_url,
+                backdrop_path: data.movie.thumb_url,
+                release_date: String(data.movie.year)
+             }, { where: { id: item.id } }).catch(err => console.error("Lazy cache update failed", err));
+
              return { 
               ...data.movie, 
               watchedAt: item.watchedAt, 
               durationWatched: item.durationWatched,
               progress: item.progress,
-              durationTotal: item.durationTotal
+              durationTotal: item.durationTotal,
+              lastEpisodeSlug: item.lastEpisodeSlug,
+              lastEpisodeName: item.lastEpisodeName
             };
         }
         return null;
@@ -505,7 +537,12 @@ app.get("/api/history/:userId", authenticateToken, async (req, res) => {
 
 app.post("/api/history", authenticateToken, async (req, res) => {
   try {
-    const { userId, movieId, duration, progress, durationTotal } = req.body;
+    const { 
+      userId, movieId, duration, progress, durationTotal, 
+      episodeSlug, episodeName,
+      title, poster_path, backdrop_path, release_date
+    } = req.body;
+
     if (!userId || !movieId) return res.status(400).json({ error: "Missing data" });
 
     if (req.user.id != userId) return res.sendStatus(403);
@@ -515,8 +552,18 @@ app.post("/api/history", authenticateToken, async (req, res) => {
     if (existingEntry) {
       existingEntry.watchedAt = new Date();
       existingEntry.durationWatched = (existingEntry.durationWatched || 0) + (duration || 0);
+      
       if (progress !== undefined) existingEntry.progress = progress;
       if (durationTotal !== undefined) existingEntry.durationTotal = durationTotal;
+      if (episodeSlug) existingEntry.lastEpisodeSlug = episodeSlug;
+      if (episodeName) existingEntry.lastEpisodeName = episodeName;
+      
+      // Update cache fields if provided
+      if (title) existingEntry.title = title;
+      if (poster_path) existingEntry.poster_path = poster_path;
+      if (backdrop_path) existingEntry.backdrop_path = backdrop_path;
+      if (release_date) existingEntry.release_date = release_date;
+      
       await existingEntry.save();
     } else {
       await History.create({
@@ -525,6 +572,12 @@ app.post("/api/history", authenticateToken, async (req, res) => {
         durationWatched: duration || 0,
         progress: progress || 0,
         durationTotal: durationTotal || 0,
+        lastEpisodeSlug: episodeSlug,
+        lastEpisodeName: episodeName,
+        title,
+        poster_path, // Note: ensure frontend sends these
+        backdrop_path,
+        release_date,
         watchedAt: new Date()
       });
     }
@@ -549,10 +602,45 @@ app.get("/api/history/progress/:movieId", authenticateToken, async (req, res) =>
     const userId = req.user.id;
 
     const entry = await History.findOne({ where: { userId, movieId } });
-    res.json({ progress: entry ? entry.progress : 0 });
+    if (entry) {
+      res.json({ 
+        progress: entry.progress,
+        lastEpisodeSlug: entry.lastEpisodeSlug,
+        lastEpisodeName: entry.lastEpisodeName
+      });
+    } else {
+      res.json({ progress: 0, lastEpisodeSlug: null });
+    }
   } catch (error) {
     console.error("Get progress error:", error);
     res.status(500).json({ error: "Failed to get progress" });
+  }
+});
+
+// Delete specific history item
+app.delete("/api/history/:movieId", authenticateToken, async (req, res) => {
+  try {
+    const { movieId } = req.params;
+    const userId = req.user.id;
+    
+    await History.destroy({ where: { userId, movieId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete history error:", error);
+    res.status(500).json({ error: "Failed to delete history item" });
+  }
+});
+
+// Clear all history for user
+app.delete("/api/history", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    await History.destroy({ where: { userId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Clear history error:", error);
+    res.status(500).json({ error: "Failed to clear history" });
   }
 });
 

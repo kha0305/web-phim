@@ -5,6 +5,7 @@ import MovieCard from '../components/MovieCard';
 import VideoPlayer from '../components/VideoPlayer';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { getMovieYear } from '../utils/movieUtils';
 
 const MovieDetail = () => {
   const { id } = useParams(); // This is now the slug
@@ -24,6 +25,11 @@ const MovieDetail = () => {
   const [initialProgress, setInitialProgress] = useState(0);
 
   const saveHistory = React.useCallback(async () => {
+    // Check for Incognito Mode
+    if (localStorage.getItem('isIncognito') === 'true') {
+      return;
+    }
+
     if (startTimeRef.current) {
       const duration = Math.round((Date.now() - startTimeRef.current) / 1000); // seconds
       // Only save if watched for at least 1 minute (60s) OR if progress > 10s (to capture resume point)
@@ -31,12 +37,19 @@ const MovieDetail = () => {
       
       if (user) {
         try {
+          // Use axios for regular updates
           await axios.post('/history', { 
             userId: user.id, 
             movieId: id,
             duration: duration,
             progress: Math.floor(progressRef.current),
-            durationTotal: Math.floor(totalDurationRef.current)
+            durationTotal: Math.floor(totalDurationRef.current),
+            episodeSlug: currentEpisode?.slug,
+            episodeName: currentEpisode?.name,
+            title: movie?.name || movie?.origin_name,
+            poster_path: movie?.poster_url || movie?.thumb_url,
+            backdrop_path: movie?.poster_url,
+            release_date: String(movie?.year || '')
           });
         } catch (error) {
           console.error("Failed to save history:", error);
@@ -81,7 +94,7 @@ const MovieDetail = () => {
         localStorage.setItem('watchHistory', JSON.stringify(trimmedHistory));
       }
     }
-  }, [user, id, movie]);
+  }, [user, id, movie, currentEpisode]);
 
   const handleClosePlayer = React.useCallback(async () => {
     await saveHistory();
@@ -101,11 +114,51 @@ const MovieDetail = () => {
         saveHistory();
       }, 5 * 60 * 1000);
     }
+
+    // Use fetch with keepalive for reliable save on unload
+    const handleUnload = () => {
+       if (user && !localStorage.getItem('isIncognito') && startTimeRef.current) {
+          const duration = Math.round((Date.now() - startTimeRef.current) / 1000);
+          if (duration < 5 && progressRef.current < 5) return;
+
+          const token = localStorage.getItem('token');
+          const data = {
+            userId: user.id, 
+            movieId: id,
+            duration: duration,
+            progress: Math.floor(progressRef.current),
+            durationTotal: Math.floor(totalDurationRef.current),
+            episodeSlug: currentEpisode?.slug,
+            episodeName: currentEpisode?.name,
+            title: movie?.name || movie?.origin_name,
+            poster_path: movie?.poster_url || movie?.thumb_url,
+            backdrop_path: movie?.poster_url,
+            release_date: String(movie?.year || '')
+          };
+
+          // Use fetch with keepalive: true to ensure request completes even after unload
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/history`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+            keepalive: true
+          }).catch(err => console.error("Keepalive duplicate save failed (expected)", err));
+       }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
       if (interval) clearInterval(interval);
-      if (showPlayer) saveHistory();
+      window.removeEventListener('beforeunload', handleUnload);
+      if (showPlayer) {
+          saveHistory(); 
+      }
     };
-  }, [showPlayer, saveHistory]);
+  }, [showPlayer, saveHistory, user, id, currentEpisode]);
 
   useEffect(() => {
     const fetchMovieDetail = async () => {
@@ -203,12 +256,21 @@ const MovieDetail = () => {
   }, [showPlayer, currentEpisode]);
 
   const handleWatch = async (episode, serverName) => {
-    // Fetch saved progress
-    let savedProgress = 0;
+    // Determine start time based on reliable episode tracking
+    let startAt = 0;
+    
     if (user) {
       try {
         const res = await axios.get(`/history/progress/${id}`);
-        savedProgress = res.data.progress || 0;
+        const { progress, lastEpisodeSlug } = res.data;
+        
+        // Only resume if it matches the episode we are about to watch
+        if (lastEpisodeSlug === episode.slug) {
+            startAt = progress || 0;
+        } else {
+            // New episode or different episode -> start from 0
+            startAt = 0;
+        }
       } catch (e) {
         console.error("Failed to fetch progress", e);
       }
@@ -217,19 +279,21 @@ const MovieDetail = () => {
       try {
         const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
         const item = localHistory.find(h => h.movieId === id || h.slug === id);
+        // For local storage, we can try to simplistic check or just resume if matches (if we stored episode info locally too)
         if (item) {
-          savedProgress = item.progress || 0;
+             startAt = item.progress || 0; 
+             // Ideally we should store episode slug locally too to match logic, but for now simple resume is okay for guest
         }
       } catch (e) {
         console.error("Failed to read local history", e);
       }
     }
     
-    setInitialProgress(savedProgress);
+    setInitialProgress(startAt);
     setCurrentEpisode({ ...episode, server_name: serverName });
     setShowPlayer(true);
     startTimeRef.current = Date.now();
-    progressRef.current = savedProgress;
+    progressRef.current = startAt;
   };
 
   const toggleWatchlist = async () => {
@@ -318,7 +382,7 @@ const MovieDetail = () => {
             </div>
             <div className="stat-item">
               <span className="stat-label">{t('release')}</span>
-              <span className="stat-value">{movie.year}</span>
+              <span className="stat-value">{getMovieYear(movie)}</span>
             </div>
              <div className="stat-item">
               <span className="stat-label">{t('quality')}</span>

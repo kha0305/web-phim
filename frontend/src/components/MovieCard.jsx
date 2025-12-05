@@ -4,63 +4,26 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 
+import { getMovieYear } from '../utils/movieUtils';
+
 const MovieCard = React.memo(({ movie, priority = false }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const { favorites, toggleFavorite } = useAuth();
   const imageUrl = movie.poster_url || movie.thumb_url || 'https://via.placeholder.com/500x750?text=No+Image';
   const title = movie.name || movie.title;
-  let year = movie.year;
+  const year = getYearFromDate(movie.year) || getMovieYear(movie);
   
   const originName = movie.origin_name || '';
 
-  // Check category for year if missing
-  if (!year && movie.category) {
-    // Look for category containing a year (e.g., "Năm 2024" or just "2024")
-    const yearCat = movie.category.find(cat => cat.name && /\b\d{4}\b/.test(cat.name));
-    if (yearCat) {
-      const match = yearCat.name.match(/(\d{4})/);
-      if (match) year = match[1];
-    }
+  // Helper inside component only if needed for other things, but getMovieYear handles most
+  function getYearFromDate(dateString) {
+      if (!dateString) return null;
+       // checks if it is just a year number
+      if (/^\d{4}$/.test(String(dateString))) return String(dateString);
+
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? null : date.getFullYear();
   }
-
-  const getYearFromDate = (dateString) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? null : date.getFullYear();
-  };
-
-  if (!year) year = getYearFromDate(movie.publish_date);
-  if (!year) year = getYearFromDate(movie.release_date);
-
-  // Regex from title/slug/originName (Higher priority than update times)
-  if (!year) {
-    const titleYearMatch = title ? title.match(/\((\d{4})\)/) : null;
-    const slugYearMatch = movie.slug ? movie.slug.match(/-(\d{4})/) : null;
-    const originYearMatch = originName ? originName.match(/\b(\d{4})\b/) : null;
-    
-    if (titleYearMatch) {
-      year = titleYearMatch[1];
-    } else if (slugYearMatch) {
-      year = slugYearMatch[1];
-    } else if (originYearMatch) {
-      year = originYearMatch[1];
-    } else if (title) {
-      // Last resort regex: try to find any 4-digit year in title
-      const looseMatch = title.match(/\b(19\d{2}|20\d{2})\b/);
-      if (looseMatch) year = looseMatch[1];
-    }
-  }
-
-  if (!year) year = getYearFromDate(movie.created_time);
-  if (!year) year = getYearFromDate(movie.created);
-  if (!year) year = getYearFromDate(movie.createdAt);
-  
-  // Update times as last resort
-  if (!year) year = getYearFromDate(movie.updated_time);
-  if (!year && movie.modified && movie.modified.time) year = getYearFromDate(movie.modified.time);
-  
-  // Fallback to empty string if no year found
-  if (!year) year = '';
 
   const duration = movie.time && movie.time !== '0' ? movie.time.replace(' phút', 'p') : '';
   const episode = movie.episode_current || '';

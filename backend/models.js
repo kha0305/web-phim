@@ -72,6 +72,14 @@ const History = sequelize.define('History', {
   durationTotal: {
     type: DataTypes.INTEGER,
     defaultValue: 0
+  },
+  lastEpisodeSlug: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  lastEpisodeName: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   indexes: [
