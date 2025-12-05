@@ -115,7 +115,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
   }, [handleMouseMove, isPlaying]);
 
   // Video Event Handlers
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     if (videoRef.current.paused) {
       videoRef.current.play();
       setIsPlaying(true);
@@ -125,7 +125,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       setIsPlaying(false);
       setShowControls(true); // Always show controls when paused
     }
-  };
+  }, [handleMouseMove]);
 
   const [showSkipButton, setShowSkipButton] = useState(null); // { start, end, label }
 
@@ -189,7 +189,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     }
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch(err => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
@@ -199,7 +199,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       document.exitFullscreen();
       setIsFullscreen(false);
     }
-  };
+  }, []);
 
   const handleQualityChange = (event) => {
     const newQuality = parseInt(event.target.value);
@@ -224,6 +224,44 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       return `${pad(minutes)}m${pad(seconds)}s`;
     }
   };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if typing in input/textarea
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+      switch(e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          if (videoRef.current) {
+             videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+             handleMouseMove();
+          }
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (videoRef.current) {
+             videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+             handleMouseMove();
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'f':
+        case 'F':
+          toggleFullscreen();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay, toggleFullscreen, handleMouseMove]);
 
   return (
     <div 

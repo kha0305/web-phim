@@ -2,12 +2,13 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 require("dotenv").config();
-const { User, History, View, Watchlist, Comment, Notification, sequelize } = require('./models');
+const { User, History, View, Watchlist, Comment, Notification, NotificationRead, sequelize } = require('./models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const compression = require('compression');
+const rateLimit = require('express-rate-limit'); // Optimize: Rate limit
 const app = express();
 const PORT = process.env.PORT || 5000;
 const IPHIM_BASE_URL = "https://iphim.cc/api/films";
@@ -21,7 +22,17 @@ sequelize.sync({ alter: true }).then(() => {
   console.error("Failed to sync database:", err);
 });
 
+// Rate Limiting: Max 100 requests per 15 minutes
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  standardHeaders: true, 
+  legacyHeaders: false,
+  message: "Too many requests from this IP, please try again after 15 minutes"
+});
+
 app.use(compression());
+app.use(limiter); // Apply rate limiting to all requests
 app.use(cors());
 app.use(express.json());
 
@@ -844,12 +855,8 @@ app.delete("/api/admin/comments/:id", authenticateAdmin, async (req, res) => {
 app.get("/api/notifications", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    // Get personal notifications OR system-wide notifications (userId is null)
-    // Note: handling 'read' status for system-wide notifications per user is complex (requires many-to-many).
-    // For simplicity: We only show personal notifications + system ones. 
-    // Creating system notifications implies copying them to all users or just showing them.
-    // Let's stick to personal for now for read status simplicity, OR just fetch where userId = id OR userId is null.
     
+    // 1. Get all relevant notifications (Personal + System)
     const notifications = await Notification.findAll({
       where: { 
         [Op.or]: [
@@ -858,9 +865,28 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
         ] 
       },
       order: [['createdAt', 'DESC']],
-      limit: 20
+      limit: 50
     });
-    res.json(notifications);
+
+    // 2. Get read status for system notifications
+    const readRecords = await NotificationRead.findAll({
+      where: { userId },
+      attributes: ['notificationId']
+    });
+    const readIds = new Set(readRecords.map(r => r.notificationId));
+
+    // 3. Merge data
+    const result = notifications.map(n => {
+      // If it's a personal notification, use the isRead column
+      // If it's a system notification (userId is null), check if it's in readIds
+      const isRead = n.userId ? n.isRead : readIds.has(n.id);
+      return {
+        ...n.toJSON(),
+        isRead
+      };
+    });
+
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch notifications" });
@@ -872,21 +898,49 @@ app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
     
-    // Only mark own notifications as read.
-    // For system notifications (userId: null), we can't 'mark as read' in the same table without affecting others.
-    // Use simplifiction: Can only mark personal ones read. 
-    // Or simpler: We don't support deleting system notifications for now.
-    
     const notification = await Notification.findOne({ where: { id } });
-    if (notification && (notification.userId === userId)) {
+    
+    if (!notification) return res.status(404).json({ error: "Notification not found" });
+
+    if (notification.userId === userId) {
+        // Personal notification -> update column
         notification.isRead = true;
         await notification.save();
+    } else if (notification.userId === null) {
+        // System notification -> add to NotificationRead table
+        await NotificationRead.findOrCreate({
+            where: { userId, notificationId: id }
+        });
     }
     
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to update notification" });
   }
+});
+
+app.put("/api/notifications/read-all", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // 1. Mark all personal notifications as read
+        await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
+
+        // 2. Find all unread system notifications and mark them as read
+        const systemNotifs = await Notification.findAll({ where: { userId: null } });
+        
+        // We could optimize this, but loop is fine for now
+        for (const n of systemNotifs) {
+            await NotificationRead.findOrCreate({
+                where: { userId, notificationId: n.id }
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to mark all as read" });
+    }
 });
 
 // --- MOVIE ROUTES (IPHIM & PHIMAPI) ---

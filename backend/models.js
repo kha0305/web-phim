@@ -57,6 +57,17 @@ const Notification = sequelize.define('Notification', {
   }
 });
 
+const NotificationRead = sequelize.define('NotificationRead', {
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  notificationId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  }
+});
+
 const History = sequelize.define('History', {
   userId: {
     type: DataTypes.INTEGER,
@@ -135,6 +146,11 @@ const View = sequelize.define('View', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   }
+}, {
+  indexes: [
+    { unique: true, fields: ['movieId'] },
+    { fields: ['count'] }
+  ]
 });
 
 const Watchlist = sequelize.define('Watchlist', {
@@ -152,10 +168,9 @@ const Watchlist = sequelize.define('Watchlist', {
   }
 }, {
   indexes: [
-    {
-      unique: true,
-      fields: ['userId', 'movieId']
-    }
+    { unique: true, fields: ['userId', 'movieId'] },
+    { fields: ['userId'] },
+    { fields: ['movieId'] }
   ]
 });
 
@@ -200,9 +215,14 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   }
+}, {
+  indexes: [
+    { fields: ['movieId'] },
+    { fields: ['userId'] }
+  ]
 });
 
 User.hasMany(Comment, { foreignKey: 'userId' });
 Comment.belongsTo(User, { foreignKey: 'userId' });
 
-module.exports = { User, History, View, Watchlist, Otp, Comment, Notification, sequelize };
+module.exports = { User, History, View, Watchlist, Otp, Comment, Notification, NotificationRead, sequelize };

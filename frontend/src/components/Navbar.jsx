@@ -51,6 +51,16 @@ const Navbar = () => {
       }
   };
 
+  const markAllRead = async () => {
+    try {
+        await axios.put('/notifications/read-all');
+        setNotifications(prev => prev.map(n => ({...n, isRead: true})));
+        setUnreadCount(0);
+    } catch (error) {
+        console.error("Failed to mark all as read");
+    }
+  };
+
   useEffect(() => {
     if (user) {
         fetchNotifications();
@@ -478,8 +488,29 @@ const Navbar = () => {
                      }}
                      onClick={(e) => e.stopPropagation()}
                      >
-                        <div style={{padding: '10px', borderBottom: '1px solid #333', fontWeight: 'bold'}}>
-                            Notifications
+                        <div style={{
+                            padding: '10px', 
+                            borderBottom: '1px solid #333', 
+                            fontWeight: 'bold', 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center'
+                        }}>
+                            <span>Notifications</span>
+                            {notifications.length > 0 && unreadCount > 0 && (
+                                <button 
+                                    onClick={markAllRead} 
+                                    style={{
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: '#e50914', 
+                                        fontSize: '0.8rem', 
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Mark all read
+                                </button>
+                            )}
                         </div>
                         {notifications.length === 0 ? (
                             <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>
