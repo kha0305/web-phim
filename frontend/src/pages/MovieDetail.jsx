@@ -24,9 +24,9 @@ const MovieDetail = () => {
 
   const saveHistory = React.useCallback(async () => {
     if (startTimeRef.current) {
-      const duration = Math.round((Date.now() - startTimeRef.current) / 1000 / 60); // minutes
-      // Only save if watched for at least 1 minute OR if progress > 10s (to capture resume point)
-      if (duration < 1 && progressRef.current < 10) return; 
+      const duration = Math.round((Date.now() - startTimeRef.current) / 1000); // seconds
+      // Only save if watched for at least 1 minute (60s) OR if progress > 10s (to capture resume point)
+      if (duration < 60 && progressRef.current < 10) return; 
       
       if (user) {
         try {

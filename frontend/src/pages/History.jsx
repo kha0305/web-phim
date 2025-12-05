@@ -35,6 +35,21 @@ const History = () => {
 
 
 
+  const formatDuration = (totalSeconds) => {
+    if (!totalSeconds) return '00m00s';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (num) => num.toString().padStart(2, '0');
+
+    if (hours > 0) {
+      return `${hours}h${pad(minutes)}m${pad(seconds)}s`;
+    } else {
+      return `${pad(minutes)}m${pad(seconds)}s`;
+    }
+  };
+
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
 
   return (
@@ -73,7 +88,7 @@ const History = () => {
                    color: '#ffc107',
                    fontWeight: '500'
                  }}>
-                   ⏱ {movie.durationWatched ? `${movie.durationWatched}m ${t('mins_watched')}` : t('just_started')}
+                   ⏱ {movie.durationWatched ? `${t('watched')} ${formatDuration(movie.durationWatched)}` : t('just_started')}
                  </div>
                </div>
             </div>
