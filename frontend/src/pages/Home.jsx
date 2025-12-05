@@ -107,16 +107,25 @@ const Home = () => {
           });
           setMovies(response.data.items || []);
         } else {
-          // Fetch both popular and top viewed
-          const [popularRes, topRes] = await Promise.all([
-            axios.get(`/movies/popular`, { params: { page } }),
-            axios.get(`/movies/top-viewed`)
-          ]);
-          
-          const popularItems = popularRes.data.items || [];
-          let topItems = topRes.data || [];
+          // Fetch both popular and top viewed independently to prevent one failure from breaking the page
+          let popularItems = [];
+          let topItems = [];
 
-          // Fallback: If no top viewed data (new app), use popular movies
+          try {
+            const popularRes = await axios.get(`/movies/popular`, { params: { page } });
+            popularItems = popularRes.data.items || [];
+          } catch (e) {
+            console.error("Failed to fetch popular movies:", e);
+          }
+
+          try {
+            const topRes = await axios.get(`/movies/top-viewed`);
+            topItems = topRes.data || [];
+          } catch (e) {
+            console.error("Failed to fetch top viewed movies:", e);
+          }
+
+          // Fallback: If no top viewed data (new app or error), use popular movies
           if (topItems.length === 0 && popularItems.length > 0) {
             topItems = popularItems.slice(0, 10);
           }
