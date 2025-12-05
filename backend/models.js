@@ -68,6 +68,10 @@ const History = sequelize.define('History', {
   },
   release_date: {
     type: DataTypes.STRING
+  },
+  durationTotal: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   indexes: [
