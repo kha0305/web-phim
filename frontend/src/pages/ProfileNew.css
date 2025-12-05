@@ -324,27 +324,73 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .profile-page-container {
+    padding: 1rem;
+    margin-top: 50px;
+    align-items: flex-start; /* Align to top on mobile */
+  }
+
+  .profile-card-wrapper {
+    border-radius: 0; /* Remove radius for full width feel */
+    border: none;
+    background: transparent; /* Seamless background */
+    box-shadow: none;
+  }
+
+  .profile-header {
+    padding: 1.5rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .profile-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .profile-tabs {
+    padding: 0 1rem;
+    gap: 1rem;
+    overflow-x: auto; /* Allow scrolling if tabs are wide */
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .profile-tab {
+    padding: 1rem 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .profile-content-body {
+    padding: 1.5rem 1rem;
+  }
+
   .profile-form-grid, .password-grid {
     grid-template-columns: 1fr;
     gap: 2.5rem;
   }
   
+  .form-column-left {
+    order: 2; /* Form below avatar on mobile */
+  }
+
   .avatar-section {
-    order: -1;
+    order: 1; /* Avatar on top */
     margin-bottom: 1rem;
+    padding-top: 0;
   }
-  
-  .profile-page-container {
+
+  .gender-options {
+    flex-direction: column; /* Stack gender options vertically */
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .btn-yellow {
+    width: 100%; /* Full width button */
+    display: flex;
+    justify-content: center;
     padding: 1rem;
-  }
-  
-  .profile-header h2 {
-    font-size: 1.4rem;
-  }
-  
-  .profile-tabs {
-    padding: 0 1.5rem;
-    gap: 1.5rem;
   }
 }
 
