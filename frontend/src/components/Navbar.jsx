@@ -24,12 +24,15 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     // Reset UI state on navigation
     const timeout = setTimeout(() => {
       setShowSuggestions(false);
       setShowHistory(false);
       setShowUserMenu(false);
+      setMobileMenuOpen(false);
 
       if (location.pathname === '/' && !location.search) {
         setQuery('');
@@ -37,6 +40,8 @@ const Navbar = () => {
     }, 0);
     return () => clearTimeout(timeout);
   }, [location]);
+
+  // ... (keep existing scroll effect)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,17 +98,35 @@ const Navbar = () => {
       if (inputRef.current) {
         inputRef.current.blur();
       }
+      setMobileMenuOpen(false);
     }
   };
 
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="container nav-content">
-        <Link to="/" className="logo">
-          PhimChill
-        </Link>
+        <div style={{display: 'flex', alignItems: 'center'}}>
+            <button 
+                className="mobile-menu-btn" 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    marginRight: '1rem',
+                    display: 'none' // Hidden by default, shown in CSS for mobile
+                }}
+            >
+                {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+            <Link to="/" className="logo">
+            PhimChill
+            </Link>
+        </div>
         
-        <div className="search-container">
+        <div className="search-container desktop-only">
 
           <form onSubmit={handleSearch}>
             <input 
@@ -183,7 +206,7 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="nav-links">
+        <div className="nav-links desktop-only">
           <Link to="/" className={`nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`}>
             {t('home')}
           </Link>
@@ -277,6 +300,67 @@ const Navbar = () => {
             </svg>
             <span className="lang-code">{language.toUpperCase()}</span>
           </button>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+            <div className="mobile-search-container">
+                <form onSubmit={handleSearch}>
+                    <input 
+                    type="text" 
+                    className="search-input" 
+                    placeholder={t('search_placeholder')} 
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    />
+                </form>
+            </div>
+            
+            <Link to="/" className={`mobile-nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                {t('home')}
+            </Link>
+            <Link to="/?type=phim-le" className={`mobile-nav-link ${location.search.includes('type=phim-le') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                Phim Lẻ
+            </Link>
+            <Link to="/?type=phim-bo" className={`mobile-nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                Phim Bộ
+            </Link>
+
+            <div className="mobile-divider"></div>
+
+            {user ? (
+                <>
+                    <div className="mobile-user-info">
+                        <div style={{width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', overflow: 'hidden', marginRight: '10px'}}>
+                            {user.avatar ? (
+                                <img src={user.avatar} alt="Avatar" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            ) : (
+                                user.username ? user.username.charAt(0).toUpperCase() : 'U'
+                            )}
+                        </div>
+                        <span>{user.username}</span>
+                    </div>
+                    <Link to="/profile" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>{t('profile') || "Hồ sơ"}</Link>
+                    <Link to="/history" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>{t('history')}</Link>
+                    <Link to="/watchlist" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>{t('my_watchlist')}</Link>
+                    <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="mobile-nav-link" style={{color: '#ff4b55', textAlign: 'left', width: '100%', background: 'none', border: 'none', fontSize: 'inherit', cursor: 'pointer'}}>
+                        {t('logout')}
+                    </button>
+                </>
+            ) : (
+                <Link to="/login" className="mobile-nav-link btn-primary" onClick={() => setMobileMenuOpen(false)}>{t('login')}</Link>
+            )}
+
+            <div className="mobile-divider"></div>
+
+            <button onClick={toggleLanguage} className="mobile-nav-link" style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', color: 'white', fontSize: 'inherit'}}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span>{language === 'vi' ? 'Tiếng Việt' : 'English'}</span>
+            </button>
         </div>
       </div>
     </nav>
