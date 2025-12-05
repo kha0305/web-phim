@@ -109,7 +109,12 @@ const Profile = () => {
                   borderRadius: '50%',
                   objectFit: 'cover',
                   border: '4px solid var(--surface-color)'
-                }} />
+                }} 
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
+                }}
+                />
               ) : (
                 <div className="profile-avatar">
                   {user.username ? user.username.charAt(0).toUpperCase() : 'U'}

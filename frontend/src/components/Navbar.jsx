@@ -204,7 +204,15 @@ const Navbar = () => {
               >
                 <div style={{width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', overflow: 'hidden'}}>
                   {user.avatar ? (
-                    <img src={user.avatar} alt="Avatar" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    <img 
+                      src={user.avatar} 
+                      alt="Avatar" 
+                      style={{width: '100%', height: '100%', objectFit: 'cover'}} 
+                      onError={(e) => {
+                        e.target.onerror = null; 
+                        e.target.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
+                      }}
+                    />
                   ) : (
                     user.username ? user.username.charAt(0).toUpperCase() : 'U'
                   )}
