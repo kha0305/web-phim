@@ -6,12 +6,16 @@ import VideoPlayer from '../components/VideoPlayer';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getMovieYear } from '../utils/movieUtils';
+import useDocumentTitle from '../hooks/useDocumentTitle';
+import Comments from '../components/Comments';
 
 const MovieDetail = () => {
   const { id } = useParams(); // This is now the slug
   const [movie, setMovie] = useState(null);
   const [relatedMovies, setRelatedMovies] = useState([]);
   const [topMovies, setTopMovies] = useState([]);
+  
+  useDocumentTitle(movie ? `${movie.name} (${getMovieYear(movie)}) - PhimChill` : 'Đang tải... - PhimChill');
 
   const [currentEpisode, setCurrentEpisode] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -409,6 +413,16 @@ const MovieDetail = () => {
                 {t('coming_soon')}
               </button>
             )}
+
+            {movie.trailer_url && (
+              <button 
+                className="btn btn-outline" 
+                style={{ marginLeft: '1rem', borderColor: '#e50914', color: '#e50914' }}
+                onClick={() => window.open(movie.trailer_url, '_blank')}
+              >
+                🎬 Trailer
+              </button>
+            )}
            
             <button 
               className={`btn ${inWatchlist ? 'btn-primary' : 'btn-outline'}`} 
@@ -548,13 +562,8 @@ const MovieDetail = () => {
               </div>
             )}
             
-            {/* Comments Section (Placeholder) */}
-            <div className="comments-section" style={{ marginTop: '3rem' }}>
-              <h3 className="section-title">{t('comments')}</h3>
-              <div style={{ background: 'var(--surface-color)', padding: '2rem', borderRadius: '8px', textAlign: 'center', color: '#aaa' }}>
-                {t('comments_feature_coming_soon')}
-              </div>
-            </div>
+            {/* Comments Section */}
+            <Comments movieId={movie._id || movie.id} />
           </div>
 
           <div className="sidebar">

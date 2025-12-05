@@ -26,6 +26,39 @@ const Navbar = () => {
   const { t, language, toggleLanguage } = useLanguage();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+      try {
+          const response = await axios.get('/notifications');
+          const data = response.data || [];
+          setNotifications(data);
+          setUnreadCount(data.filter(n => !n.isRead).length);
+      } catch (error) {
+          console.error("Failed to fetch notifications");
+      }
+  };
+
+  const markAsRead = async (id) => {
+      try {
+          await axios.put(`/notifications/${id}/read`);
+          setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n));
+          setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+          console.error("Failed to mark read");
+      }
+  };
+
+  useEffect(() => {
+    if (user) {
+        fetchNotifications();
+        // Poll for notifications every 60 seconds
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Reset UI state on navigation
@@ -33,6 +66,7 @@ const Navbar = () => {
       setShowSuggestions(false);
       setShowHistory(false);
       setShowUserMenu(false);
+      setShowNotifications(false);
       setMobileMenuOpen(false);
 
       if (location.pathname === '/' && !location.search) {
@@ -124,6 +158,14 @@ const Navbar = () => {
     }
   };
 
+  const handleHomeClick = (e) => {
+    // If currently on home page (without search), force reload
+    if (location.pathname === '/' && !location.search) {
+      e.preventDefault();
+      window.location.reload();
+    }
+  };
+
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="container nav-content">
@@ -143,7 +185,7 @@ const Navbar = () => {
             >
                 {mobileMenuOpen ? '✕' : '☰'}
             </button>
-            <Link to="/" className="logo">
+            <Link to="/" className="logo" onClick={handleHomeClick}>
             PhimChill
             </Link>
         </div>
@@ -261,7 +303,7 @@ const Navbar = () => {
         </div>
 
         <div className="nav-links desktop-only">
-          <Link to="/" className={`nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`}>
+          <Link to="/" className={`nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`} onClick={handleHomeClick}>
             {t('home')}
           </Link>
           <Link to="/?type=phim-le" className={`nav-link ${location.search.includes('type=phim-le') ? 'active' : ''}`}>
@@ -269,6 +311,9 @@ const Navbar = () => {
           </Link>
           <Link to="/?type=phim-bo" className={`nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`}>
             Phim Bộ
+          </Link>
+          <Link to="/catalog" className={`nav-link ${location.pathname === '/catalog' ? 'active' : ''}`}>
+            {t('explore_movies') || 'Khám Phá'}
           </Link>
           
           {user ? (
@@ -386,6 +431,86 @@ const Navbar = () => {
             <Link to="/login" className="nav-link btn btn-primary" style={{padding: '0.5rem 1rem', marginLeft: '1rem'}}>{t('login')}</Link>
           )}
 
+
+          {/* Notifications */}
+          {user && (
+              <div 
+                className="notification-container" 
+                style={{position: 'relative', marginLeft: '1rem', cursor: 'pointer'}}
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowUserMenu(false);
+                }}
+              >
+                 <div style={{position: 'relative'}}>
+                     <span style={{fontSize: '1.2rem', color: 'white'}}>🔔</span>
+                     {unreadCount > 0 && (
+                         <span style={{
+                             position: 'absolute',
+                             top: '-5px',
+                             right: '-5px',
+                             background: 'red',
+                             color: 'white',
+                             borderRadius: '50%',
+                             padding: '2px 5px',
+                             fontSize: '0.6rem',
+                             minWidth: '15px',
+                             textAlign: 'center'
+                         }}>
+                             {unreadCount}
+                         </span>
+                     )}
+                 </div>
+
+                 {showNotifications && (
+                     <div className="notification-dropdown" style={{
+                         position: 'absolute',
+                         top: '40px',
+                         right: '0',
+                         width: '300px',
+                         background: '#222',
+                         border: '1px solid #333',
+                         borderRadius: '8px',
+                         zIndex: 1000,
+                         boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                         maxHeight: '400px',
+                         overflowY: 'auto'
+                     }}
+                     onClick={(e) => e.stopPropagation()}
+                     >
+                        <div style={{padding: '10px', borderBottom: '1px solid #333', fontWeight: 'bold'}}>
+                            Notifications
+                        </div>
+                        {notifications.length === 0 ? (
+                            <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>
+                                No notifications
+                            </div>
+                        ) : (
+                            notifications.map(n => (
+                                <div 
+                                    key={n.id} 
+                                    style={{
+                                        padding: '10px', 
+                                        borderBottom: '1px solid #333', 
+                                        opacity: n.isRead ? 0.6 : 1,
+                                        cursor: 'pointer',
+                                        background: n.isRead ? 'transparent' : 'rgba(255,255,255,0.05)'
+                                    }}
+                                    onClick={() => markAsRead(n.id)}
+                                >
+                                    <div style={{fontWeight: 'bold', fontSize: '0.9rem'}}>{n.title}</div>
+                                    <div style={{fontSize: '0.8rem', color: '#ccc'}}>{n.message}</div>
+                                    <div style={{fontSize: '0.7rem', color: '#666', marginTop: '4px'}}>
+                                        {new Date(n.createdAt).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                     </div>
+                 )}
+              </div>
+          )}
+
           <button onClick={toggleLanguage} className="nav-link language-btn" style={{marginLeft: '1rem'}} title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -418,6 +543,9 @@ const Navbar = () => {
             </Link>
             <Link to="/?type=phim-bo" className={`mobile-nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
                 Phim Bộ
+            </Link>
+            <Link to="/catalog" className={`mobile-nav-link ${location.pathname === '/catalog' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                {t('explore_movies') || 'Khám Phá'}
             </Link>
 
             <div className="mobile-divider"></div>

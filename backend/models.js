@@ -27,6 +27,33 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING, // 'male', 'female', 'other'
     allowNull: true,
     defaultValue: 'other'
+  },
+  role: {
+    type: DataTypes.STRING,
+    defaultValue: 'user', // 'user', 'admin'
+  }
+});
+
+const Notification = sequelize.define('Notification', {
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true // null means "all users" or "system" notification
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  isRead: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  type: {
+    type: DataTypes.STRING, // 'system', 'new_episode', 'reply'
+    defaultValue: 'system'
   }
 });
 
@@ -156,4 +183,26 @@ History.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Watchlist, { foreignKey: 'userId' });
 Watchlist.belongsTo(User, { foreignKey: 'userId' });
 
-module.exports = { User, History, View, Watchlist, Otp, sequelize };
+const Comment = sequelize.define('Comment', {
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  movieId: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  content: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+});
+
+User.hasMany(Comment, { foreignKey: 'userId' });
+Comment.belongsTo(User, { foreignKey: 'userId' });
+
+module.exports = { User, History, View, Watchlist, Otp, Comment, Notification, sequelize };

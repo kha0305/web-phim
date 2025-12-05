@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 require("dotenv").config();
-const { User, History, View, Watchlist, sequelize } = require('./models');
+const { User, History, View, Watchlist, Comment, Notification, sequelize } = require('./models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -731,6 +731,163 @@ app.delete("/api/watchlist/:movieId", authenticateToken, async (req, res) => {
   }
 });
 
+// --- COMMENT ROUTES ---
+
+app.get("/api/comments/:movieId", async (req, res) => {
+  try {
+    const { movieId } = req.params;
+    const comments = await Comment.findAll({
+      where: { movieId },
+      include: [{
+        model: User,
+        attributes: ['username', 'avatar']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(comments);
+  } catch (error) {
+    console.error("Fetch comments error:", error);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
+app.post("/api/comments", authenticateToken, async (req, res) => {
+  try {
+    const { movieId, content } = req.body;
+    const userId = req.user.id;
+    
+    if (!content || !content.trim()) return res.status(400).json({ error: "Content is required" });
+
+    const newComment = await Comment.create({
+      userId,
+      movieId,
+      content: content.trim()
+    });
+
+    const commentWithUser = await Comment.findOne({
+      where: { id: newComment.id },
+      include: [{
+        model: User,
+        attributes: ['username', 'avatar']
+      }]
+    });
+
+    res.json(commentWithUser);
+  } catch (error) {
+    console.error("Post comment error:", error);
+    res.status(500).json({ error: "Failed to post comment" });
+  }
+});
+
+// --- ADMIN MIDDLEWARE ---
+const authenticateAdmin = (req, res, next) => {
+  authenticateToken(req, res, () => {
+    if (req.user && req.user.role === 'admin') {
+      next();
+    } else {
+      res.sendStatus(403);
+    }
+  });
+};
+
+// --- ADMIN ROUTES ---
+app.get("/api/admin/stats", authenticateAdmin, async (req, res) => {
+  try {
+    const userCount = await User.count();
+    const commentCount = await Comment.count();
+    const viewCount = await View.sum('count') || 0;
+    
+    // Top 5 Most Viewed (already have logic for this, reuse or simplified)
+    const topViews = await View.findAll({
+      order: [['count', 'DESC']],
+      limit: 5
+    });
+
+    res.json({
+       userCount,
+       commentCount,
+       viewCount,
+       topViews
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});
+
+app.post("/api/admin/notify", authenticateAdmin, async (req, res) => {
+  try {
+    const { title, message, userId } = req.body; // userId null = all
+    await Notification.create({
+      userId: userId || null,
+      title,
+      message,
+      type: 'system'
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+
+app.delete("/api/admin/comments/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Comment.destroy({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+});
+
+// --- NOTIFICATION ROUTES ---
+app.get("/api/notifications", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Get personal notifications OR system-wide notifications (userId is null)
+    // Note: handling 'read' status for system-wide notifications per user is complex (requires many-to-many).
+    // For simplicity: We only show personal notifications + system ones. 
+    // Creating system notifications implies copying them to all users or just showing them.
+    // Let's stick to personal for now for read status simplicity, OR just fetch where userId = id OR userId is null.
+    
+    const notifications = await Notification.findAll({
+      where: { 
+        [sequelize.Op.or]: [
+          { userId },
+          { userId: null }
+        ] 
+      },
+      order: [['createdAt', 'DESC']],
+      limit: 20
+    });
+    res.json(notifications);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch notifications" });
+  }
+});
+
+app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    // Only mark own notifications as read.
+    // For system notifications (userId: null), we can't 'mark as read' in the same table without affecting others.
+    // Use simplifiction: Can only mark personal ones read. 
+    // Or simpler: We don't support deleting system notifications for now.
+    
+    const notification = await Notification.findOne({ where: { id } });
+    if (notification && (notification.userId === userId)) {
+        notification.isRead = true;
+        await notification.save();
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update notification" });
+  }
+});
+
 // --- MOVIE ROUTES (IPHIM & PHIMAPI) ---
 
 // Get Genres
@@ -740,6 +897,54 @@ app.get("/api/genres", async (req, res) => {
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch genres" });
+  }
+});
+
+// Get Countries
+app.get("/api/countries", async (req, res) => {
+  try {
+    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/quoc-gia`);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch countries" });
+  }
+});
+
+// Get Movies by Genre
+app.get("/api/movies/genre/:slug", async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const { slug } = req.params;
+    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/the-loai/${slug}?page=${page}`);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch movies by genre" });
+  }
+});
+
+// Get Movies by Country
+app.get("/api/movies/country/:slug", async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const { slug } = req.params;
+    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/quoc-gia/${slug}?page=${page}`);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch movies by country" });
+  }
+});
+
+// Get Movies by Year (approximation if API supports, otherwise return empty or use search)
+app.get("/api/movies/year/:year", async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const { year } = req.params;
+    // PhimAPI might support /nam-phat-hanh/2024
+    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/nam-phat-hanh/${year}?page=${page}`);
+    res.json(data);
+  } catch (error) {
+    // Fallback if not supported
+    res.json({ title: `Movies in ${req.params.year}`, items: [] });
   }
 });
 

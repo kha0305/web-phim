@@ -1,0 +1,67 @@
+/* Bottom Navigation for Mobile */
+.bottom-nav {
+  display: flex; /* Hidden by default via media query often, but let's make it visible on mobile and hidden on desktop */
+  justify-content: space-around;
+  align-items: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #888;
+  font-size: 10px;
+  transition: all 0.2s ease;
+  width: 25%;
+  height: 100%;
+}
+
+.bottom-nav-item .icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary-color);
+}
+
+.bottom-nav-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+}
+
+.bottom-nav-item.active .bottom-nav-avatar {
+    border-color: var(--primary-color);
+}
+
+.bottom-nav-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}

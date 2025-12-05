@@ -5,6 +5,8 @@ import ScrollToTop from './components/ScrollToTop';
 import { Analytics } from "@vercel/analytics/react";
 
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
+import './components/BottomNav.css';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 
@@ -17,6 +19,9 @@ const History = React.lazy(() => import('./pages/History'));
 const Watchlist = React.lazy(() => import('./pages/Watchlist'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const Catalog = React.lazy(() => import('./pages/Catalog'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 
 const LoadingFallback = () => (
   <div className="loading-container">
@@ -41,9 +46,13 @@ function App() {
               <Route path="/history" element={<History />} />
               <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
           <Footer />
+          <BottomNav />
           <Analytics />
         </Router>
       </AuthProvider>

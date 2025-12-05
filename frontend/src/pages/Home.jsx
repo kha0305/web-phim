@@ -7,8 +7,11 @@ import HistoryCard from '../components/HistoryCard';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getMovieYear } from '../utils/movieUtils';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const Home = () => {
+  useDocumentTitle('PhimChill - Xem Phim Online Miễn Phí');
+
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [featuredMovie, setFeaturedMovie] = useState(null);

@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { useLanguage } from '../context/LanguageContext';
 
+import useDocumentTitle from '../hooks/useDocumentTitle';
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -12,6 +14,7 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  useDocumentTitle(`${t('login')} - PhimChill`);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
