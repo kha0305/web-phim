@@ -338,7 +338,6 @@ const Navbar = () => {
                       }}
                     >
                       <span style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                        {isIncognito ? '🕵️' : '👁️'}
                          {t('incognito_mode') || 'Chế độ ẩn danh'}
                       </span>
                       <div style={{
