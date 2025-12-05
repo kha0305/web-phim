@@ -173,11 +173,17 @@ const Home = () => {
       const random = Math.floor(Math.random() * Math.min(10, bannerMovies.length));
       const nextMovie = bannerMovies[random];
       
+      if (!nextMovie) return; // Safety check
+
       try {
         const featuredFull = await axios.get(`/movies/${nextMovie.slug}`);
-        setFeaturedMovie(featuredFull.data);
+        if (featuredFull.data) {
+             setFeaturedMovie(featuredFull.data);
+        } else {
+             setFeaturedMovie(nextMovie);
+        }
       } catch (e) {
-        console.error("Error rotating featured movie:", e);
+        // console.warn("Could not fetch full details for featured movie, using basic info.");
         setFeaturedMovie(nextMovie);
       }
     }, 20000);
@@ -321,14 +327,6 @@ const Home = () => {
                   {history.map(movie => (
                     <div key={movie._id || movie.id}>
                       <MovieCard movie={movie} priority={true} />
-                      <div style={{
-                        marginTop: '5px',
-                        fontSize: '0.8rem',
-                        color: '#ffc107',
-                        fontWeight: '500'
-                      }}>
-                        ⏱ {movie.durationWatched ? `${movie.durationWatched}m` : t('just_started')}
-                      </div>
                     </div>
                   ))}
                 </div>

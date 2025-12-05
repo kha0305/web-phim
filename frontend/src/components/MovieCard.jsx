@@ -123,6 +123,28 @@ const MovieCard = React.memo(({ movie, priority = false }) => {
               {year}
             </div>
           )}
+          
+          {/* Duration Watched Badge */}
+          {movie.durationWatched && (
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              background: 'rgba(0, 0, 0, 0.7)',
+              color: '#ffc107',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              zIndex: 5,
+              backdropFilter: 'blur(2px)'
+            }}>
+              <span style={{fontSize: '1rem'}}>⏱</span> {movie.durationWatched}m
+            </div>
+          )}
         </div>
         
         <div className="movie-info" style={{ padding: '12px' }}>
