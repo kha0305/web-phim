@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -17,11 +18,10 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
-      // Basic client-side check, backend will enforce too
-      // navigate('/'); // Commented out for dev if we want to view it, but actually we should redirect
+      navigate('/');
     }
     fetchStats();
-  }, [user]);
+  }, [user, navigate]);
 
   const fetchStats = async () => {
     try {
@@ -45,6 +45,7 @@ const AdminDashboard = () => {
         setFeedback('Notification sent successfully!');
         setNotifTitle('');
         setNotifMessage('');
+        setTimeout(() => setFeedback(''), 3000);
     } catch (error) {
         setFeedback('Failed to send notification.');
     } finally {
@@ -52,74 +53,97 @@ const AdminDashboard = () => {
     }
   };
 
-  if (!user || user.role !== 'admin') {
-      return (
-          <div className="container" style={{marginTop: '100px', textAlign: 'center'}}>
-              <h1>Access Denied</h1>
-              <p>You must be an administrator to view this page.</p>
-          </div>
-      );
-  }
-
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
 
   return (
-    <div className="container" style={{ marginTop: '80px', minHeight: '80vh' }}>
-      <h1>Admin Dashboard</h1>
+    <div className="admin-dashboard-container">
+      <div className="admin-header">
+        <h1>Admin Dashboard</h1>
+        <p className="admin-subtitle">Welcome back, {user?.username}!</p>
+      </div>
       
       {/* Stats Cards */}
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
-        <div className="stat-card" style={{ background: '#222', padding: '20px', borderRadius: '8px' }}>
-            <h3>Users</h3>
-            <p style={{ fontSize: '2rem', color: 'var(--primary-color)' }}>{stats?.userCount}</p>
+      <div className="stats-grid">
+        <div className="stat-card">
+            <div className="stat-icon">👥</div>
+            <div className="stat-info">
+              <h3>Users</h3>
+              <p className="stat-value">{stats?.userCount}</p>
+            </div>
         </div>
-        <div className="stat-card" style={{ background: '#222', padding: '20px', borderRadius: '8px' }}>
-            <h3>Comments</h3>
-            <p style={{ fontSize: '2rem', color: 'var(--primary-color)' }}>{stats?.commentCount}</p>
+        <div className="stat-card">
+            <div className="stat-icon">💬</div>
+             <div className="stat-info">
+              <h3>Comments</h3>
+              <p className="stat-value">{stats?.commentCount}</p>
+            </div>
         </div>
-        <div className="stat-card" style={{ background: '#222', padding: '20px', borderRadius: '8px' }}>
-            <h3>Total Views</h3>
-            <p style={{ fontSize: '2rem', color: 'var(--primary-color)' }}>{stats?.viewCount}</p>
+        <div className="stat-card">
+            <div className="stat-icon">👁️</div>
+             <div className="stat-info">
+              <h3>Total Views</h3>
+              <p className="stat-value">{stats?.viewCount}</p>
+            </div>
         </div>
       </div>
 
-      {/* Access Token Warning */}
-      {!import.meta.env.VITE_API_URL && (
-         <div style={{marginTop: '20px', padding: '10px', background: '#332b00', border: '1px solid #ffd700'}}>
-             ⚠️ Warning: Env variables might not be set correctly.
-         </div>
-      )}
+       <div className="dashboard-content">
+          {/* Send Notification */}
+          <div className="dashboard-section notification-section">
+              <h2>📢 System Notification</h2>
+              <p className="section-desc">Send a broadcast message to all users.</p>
+              
+              {feedback && (
+                <div className={`feedback-msg ${feedback.includes('success') ? 'success' : 'error'}`}>
+                  {feedback}
+                </div>
+              )}
 
-      {/* Send Notification */}
-      <div style={{ marginTop: '40px', background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
-          <h2>Send System Notification</h2>
-          {feedback && <p style={{color: feedback.includes('success') ? 'green' : 'red'}}>{feedback}</p>}
-          <form onSubmit={handleSendNotification} style={{marginTop: '15px'}}>
-              <div style={{marginBottom: '10px'}}>
-                  <input 
-                    type="text" 
-                    placeholder="Title"
-                    className="form-input"
-                    value={notifTitle}
-                    onChange={e => setNotifTitle(e.target.value)}
-                    required
-                  />
-              </div>
-              <div style={{marginBottom: '10px'}}>
-                  <textarea 
-                    placeholder="Message"
-                    className="form-input"
-                    value={notifMessage}
-                    onChange={e => setNotifMessage(e.target.value)}
-                    required
-                    style={{minHeight: '100px'}}
-                  />
-              </div>
-              <button className="btn btn-primary" disabled={sending}>
-                  {sending ? 'Sending...' : 'Send to All Users'}
-              </button>
-          </form>
-      </div>
+              <form onSubmit={handleSendNotification} className="notification-form">
+                  <div className="form-group">
+                      <label>Title</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. System Update, New Feature..."
+                        className="form-input"
+                        value={notifTitle}
+                        onChange={e => setNotifTitle(e.target.value)}
+                        required
+                      />
+                  </div>
+                  <div className="form-group">
+                      <label>Message</label>
+                      <textarea 
+                        placeholder="Write your message here..."
+                        className="form-input"
+                        value={notifMessage}
+                        onChange={e => setNotifMessage(e.target.value)}
+                        required
+                        rows="4"
+                      />
+                  </div>
+                  <button className="btn btn-primary send-btn" disabled={sending}>
+                      {sending ? 'Sending...' : '🚀 Send Notification'}
+                  </button>
+              </form>
+          </div>
+
+          {/* Top Views - Placeholder if data exists */}
+          {stats?.topViews && stats.topViews.length > 0 && (
+             <div className="dashboard-section top-views-section">
+                <h2>🔥 Top Viewed Movies</h2>
+                 <div className="top-views-list">
+                    {stats.topViews.map((view, index) => (
+                      <div key={index} className="top-view-item">
+                          <span className="rank">#{index + 1}</span>
+                          <span className="movie-id">ID: {view.movieId}</span>
+                          <span className="views">{view.count} views</span>
+                      </div>
+                    ))}
+                 </div>
+             </div>
+          )}
+       </div>
     </div>
   );
 };
