@@ -371,6 +371,72 @@ app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (
   }
 });
 
+// Request Email Change - Send OTP to NEW email
+app.post("/api/user/request-email-change", authenticateToken, async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    if (!newEmail) return res.status(400).json({ error: "New email is required" });
+
+    // Check if email is already taken
+    const existingUser = await User.findOne({ where: { email: newEmail } });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already in use" });
+    }
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Remove existing OTPs for this email
+    await Otp.destroy({ where: { email: newEmail } });
+
+    // Save new OTP
+    await Otp.create({ email: newEmail, otp, expiresAt });
+
+    // Send OTP Email
+    await sendOtpEmail(newEmail, otp);
+
+    res.json({ success: true, message: "OTP sent to new email" });
+  } catch (error) {
+    console.error("Request email change error:", error);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// Verify Email Change - Update Email
+app.post("/api/user/verify-email-change", authenticateToken, async (req, res) => {
+  try {
+    const { newEmail, otp } = req.body;
+    const userId = req.user.id;
+
+    if (!newEmail || !otp) return res.status(400).json({ error: "Missing fields" });
+
+    const record = await Otp.findOne({ where: { email: newEmail, otp } });
+    
+    if (!record) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    if (new Date() > record.expiresAt) {
+      return res.status(400).json({ error: "OTP expired" });
+    }
+
+    // Update User Email
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.email = newEmail;
+    await user.save();
+
+    // Delete used OTP
+    await record.destroy();
+
+    res.json({ success: true, message: "Email updated successfully", user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar } });
+  } catch (error) {
+    console.error("Verify email change error:", error);
+    res.status(500).json({ error: "Failed to update email" });
+  }
+});
+
 // --- HISTORY ROUTES ---
 app.get("/api/history/:userId", authenticateToken, async (req, res) => {
   try {

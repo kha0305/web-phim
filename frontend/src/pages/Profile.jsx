@@ -20,11 +20,20 @@ const Profile = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
 
+  // Email Change State
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
+
   useEffect(() => {
     if (user) {
       setEditName(user.username);
       setEditAvatar(user.avatar || '');
       setPreviewUrl(user.avatar || '');
+      setNewEmail(user.email || '');
     }
   }, [user]);
 
@@ -69,9 +78,6 @@ const Profile = () => {
       if (selectedFile) {
         formData.append('avatar', selectedFile);
       } else if (editAvatar !== user.avatar) {
-         // If user manually entered a URL (though we are switching to file upload, keeping URL support might be confusing, let's stick to file or existing URL)
-         // Actually, let's support both if we keep the text input, but user asked for "upload".
-         // Let's prioritize file.
          formData.append('avatarUrl', editAvatar);
       }
 
@@ -89,6 +95,35 @@ const Profile = () => {
     } catch (error) {
       console.error("Update failed:", error);
       alert("Failed to update profile");
+    }
+  };
+
+  const handleRequestEmailChange = async () => {
+    if (!newEmail || newEmail === user.email) return;
+    setEmailError('');
+    setEmailMessage('');
+    try {
+      await axios.post('/user/request-email-change', { newEmail });
+      setShowOtpModal(true);
+      setEmailMessage('OTP sent to ' + newEmail);
+    } catch (error) {
+      setEmailError(error.response?.data?.error || 'Failed to send OTP');
+    }
+  };
+
+  const handleVerifyEmailChange = async () => {
+    if (!otp) return;
+    setEmailError('');
+    setEmailMessage('');
+    try {
+      const response = await axios.post('/user/verify-email-change', { newEmail, otp });
+      updateUser(response.data.user);
+      setShowOtpModal(false);
+      setIsEditingEmail(false);
+      setOtp('');
+      alert('Email updated successfully!');
+    } catch (error) {
+      setEmailError(error.response?.data?.error || 'Invalid OTP');
     }
   };
 
@@ -191,7 +226,60 @@ const Profile = () => {
               ) : (
                 <h1 className="profile-name">{user.username}</h1>
               )}
-              <p className="profile-email">{user.email || 'user@example.com'}</p>
+              
+              {/* Email Section */}
+              <div className="profile-email-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
+                {isEditingEmail ? (
+                  <>
+                    <input 
+                      type="email" 
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      style={{
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        padding: '5px 10px',
+                        color: 'white',
+                        outline: 'none'
+                      }}
+                    />
+                    <button onClick={handleRequestEmailChange} className="btn-sm btn-primary">Verify</button>
+                    <button onClick={() => { setIsEditingEmail(false); setNewEmail(user.email || ''); }} className="btn-sm btn-outline">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <p className="profile-email">{user.email || 'No email set'}</p>
+                    <button onClick={() => setIsEditingEmail(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }}>✏️</button>
+                  </>
+                )}
+              </div>
+              {emailError && <p style={{ color: 'red', fontSize: '0.8rem' }}>{emailError}</p>}
+              {emailMessage && <p style={{ color: 'green', fontSize: '0.8rem' }}>{emailMessage}</p>}
+
+              {/* OTP Modal */}
+              {showOtpModal && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                  background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                  <div style={{ background: '#222', padding: '20px', borderRadius: '8px', width: '300px', textAlign: 'center' }}>
+                    <h3>Verify Email</h3>
+                    <p style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '15px' }}>Enter the OTP sent to {newEmail}</p>
+                    <input 
+                      type="text" 
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="Enter OTP"
+                      style={{ width: '100%', padding: '10px', marginBottom: '15px', textAlign: 'center', fontSize: '1.2rem', letterSpacing: '2px' }}
+                    />
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                      <button onClick={handleVerifyEmailChange} className="btn btn-primary">Confirm</button>
+                      <button onClick={() => setShowOtpModal(false)} className="btn btn-outline">Close</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="profile-badges">
                 <span className="profile-badge member-badge">Member</span>
                 {/* <span className="profile-badge vip-badge">VIP</span> */}
