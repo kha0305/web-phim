@@ -6,6 +6,7 @@ const { User, History, View, Watchlist, sequelize } = require('./models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const compression = require('compression');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const IPHIM_BASE_URL = "https://iphim.cc/api/films";
@@ -19,6 +20,7 @@ sequelize.sync({ alter: true }).then(() => {
   console.error("Failed to sync database:", err);
 });
 
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 
@@ -43,7 +45,7 @@ const authenticateToken = (req, res, next) => {
 
 // Simple in-memory cache
 const apiCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL = 60 * 60 * 1000; // 60 minutes
 
 // Helper function for API requests with caching
 const fetchFromAPI = async (url) => {
@@ -731,7 +733,7 @@ app.get("/api/genres", async (req, res) => {
 // Specific caches for heavy endpoints
 let popularCache = { data: null, timestamp: 0 };
 let topViewedCache = { data: null, timestamp: 0 };
-const ENDPOINT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const ENDPOINT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Get Popular Movies (Phim mới cập nhật)
 app.get("/api/movies/popular", async (req, res) => {

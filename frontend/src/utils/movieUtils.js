@@ -56,17 +56,11 @@ export const getMovieYear = (movie) => {
   const looseTitleMatch = title.match(/\b(19\d{2}|20\d{2})\b/);
   if (looseTitleMatch) return looseTitleMatch[1];
 
-  // 5. Creation times (reliable for newly scraped movies)
-  year = getYearFromDate(movie.created_time) || 
-         getYearFromDate(movie.created) || 
-         getYearFromDate(movie.createdAt);
-  if (year) return year;
+  // 5. Creation times (removed as they often reflect DB insertion time, not release time)
+  // year = getYearFromDate(movie.created_time) ...
 
-  // 6. Modification times (least reliable, might just be metadata update)
-  year = getYearFromDate(movie.updated_time);
-  if (!year && movie.modified && movie.modified.time) {
-    year = getYearFromDate(movie.modified.time);
-  }
+  // 6. Modification times (removed)
+  // year = getYearFromDate(movie.updated_time); ...
 
   return year || '';
 };

@@ -113,7 +113,13 @@ export const translations = {
     today: "Hôm nay",
     yesterday: "Hôm qua",
     older: "Cũ hơn",
-    remove_from_history: "Xóa khỏi lịch sử"
+    remove_from_history: "Xóa khỏi lịch sử",
+    password_length_error: "Mật khẩu phải từ 8 đến 20 ký tự.",
+    password_uppercase_error: "Mật khẩu phải chứa ít nhất 1 chữ hoa.",
+    password_lowercase_error: "Mật khẩu phải chứa ít nhất 1 chữ thường.",
+    password_number_error: "Mật khẩu phải chứa ít nhất 1 số.",
+    password_special_char_error: "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.",
+    password_whitespace_error: "Mật khẩu không được chứa khoảng trắng."
   },
   en: {
     home: "Home",
@@ -213,6 +219,12 @@ export const translations = {
     today: "Today",
     yesterday: "Yesterday",
     older: "Older",
-    remove_from_history: "Remove from history"
+    remove_from_history: "Remove from history",
+    password_length_error: "Password must be 8-20 characters long.",
+    password_uppercase_error: "Password must contain at least one uppercase letter.",
+    password_lowercase_error: "Password must contain at least one lowercase letter.",
+    password_number_error: "Password must contain at least one number.",
+    password_special_char_error: "Password must contain at least one special character.",
+    password_whitespace_error: "Password must not contain whitespace."
   }
 };
