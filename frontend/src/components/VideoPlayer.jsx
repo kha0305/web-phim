@@ -186,9 +186,19 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress }) => {
   };
 
   const formatTime = (time) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    if (!time) return '00m00s';
+    const totalSeconds = Math.floor(time);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (num) => num.toString().padStart(2, '0');
+
+    if (hours > 0) {
+      return `${hours}h${pad(minutes)}m${pad(seconds)}s`;
+    } else {
+      return `${pad(minutes)}m${pad(seconds)}s`;
+    }
   };
 
   return (
