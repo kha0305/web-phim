@@ -119,7 +119,12 @@ export const translations = {
     password_lowercase_error: "Mật khẩu phải chứa ít nhất 1 chữ thường.",
     password_number_error: "Mật khẩu phải chứa ít nhất 1 số.",
     password_special_char_error: "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.",
-    password_whitespace_error: "Mật khẩu không được chứa khoảng trắng."
+    password_whitespace_error: "Mật khẩu không được chứa khoảng trắng.",
+    explore_movies: "Khám Phá Phim",
+    all_genres: "Tất Cả Thể Loại",
+    all_countries: "Tất Cả Quốc Gia",
+    all_years: "Tất Cả Năm",
+    reset: "Đặt Lại"
   },
   en: {
     home: "Home",
@@ -225,6 +230,11 @@ export const translations = {
     password_lowercase_error: "Password must contain at least one lowercase letter.",
     password_number_error: "Password must contain at least one number.",
     password_special_char_error: "Password must contain at least one special character.",
-    password_whitespace_error: "Password must not contain whitespace."
+    password_whitespace_error: "Password must not contain whitespace.",
+    explore_movies: "Explore Movies",
+    all_genres: "All Genres",
+    all_countries: "All Countries",
+    all_years: "All Years",
+    reset: "Reset"
   }
 };

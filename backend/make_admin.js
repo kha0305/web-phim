@@ -18,6 +18,9 @@ const makeAdmin = async () => {
     
     if (!user) {
       console.log(`User '${username}' not found.`);
+      console.log('Available users:');
+      const users = await User.findAll({ attributes: ['username'] });
+      users.forEach(u => console.log(` - ${u.username}`));
       process.exit(1);
     }
 
