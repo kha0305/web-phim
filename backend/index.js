@@ -48,16 +48,29 @@ const apiCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 60 minutes
 
 // Helper function for API requests with caching
+// Helper function for API requests with Stale-While-Revalidate caching
 const fetchFromAPI = async (url) => {
   const now = Date.now();
-  if (apiCache.has(url)) {
-    const { data, timestamp } = apiCache.get(url);
-    if (now - timestamp < CACHE_TTL) {
-      return data;
+  const cached = apiCache.get(url);
+  
+  if (cached) {
+    const { data, timestamp } = cached;
+    const age = now - timestamp;
+    
+    // If cache is relatively fresh (less than 10 minutes), return immediately without update
+    // If cache is stale (older than 10 minutes), return immediately BUT trigger background update
+    if (age > 10 * 60 * 1000) {
+       // Background update (fire and forget)
+       axios.get(url).then(response => {
+         apiCache.set(url, { data: response.data, timestamp: Date.now() });
+         // console.log(`Background updated: ${url}`);
+       }).catch(err => console.error(`Background update failed for ${url}:`, err.message));
     }
-    apiCache.delete(url);
+    
+    return data;
   }
 
+  // Cold start: must wait for fetch
   try {
     const response = await axios.get(url);
     apiCache.set(url, { data: response.data, timestamp: now });
