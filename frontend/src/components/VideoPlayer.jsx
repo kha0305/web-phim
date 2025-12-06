@@ -398,6 +398,50 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
           </div>
 
           <div className="right-controls">
+            {/* Speed Control */}
+            <div className="speed-control" style={{ position: 'relative', marginRight: '10px' }}>
+               <select
+                 value={videoRef.current?.playbackRate || 1}
+                 onChange={(e) => {
+                   const rate = parseFloat(e.target.value);
+                   if (videoRef.current) videoRef.current.playbackRate = rate;
+                   // Force re-render to update UI if needed, usually simple select is enough
+                 }}
+                 className="speed-select"
+                 style={{
+                   background: 'transparent', color: 'white', border: 'none', fontSize: '14px', cursor: 'pointer', outline: 'none'
+                 }}
+               >
+                 <option value="0.5">0.5x</option>
+                 <option value="0.75">0.75x</option>
+                 <option value="1">1x</option>
+                 <option value="1.25">1.25x</option>
+                 <option value="1.5">1.5x</option>
+                 <option value="2">2x</option>
+               </select>
+            </div>
+
+            {/* PiP Button */}
+            {document.pictureInPictureEnabled && (
+              <button 
+                className="control-btn" 
+                onClick={async () => {
+                  try {
+                    if (document.pictureInPictureElement) {
+                      await document.exitPictureInPicture();
+                    } else if (videoRef.current) {
+                      await videoRef.current.requestPictureInPicture();
+                    }
+                  } catch (error) {
+                    console.error("PiP failed:", error);
+                  }
+                }}
+                title="Picture in Picture"
+              >
+                <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.97h18v14.04z"/></svg>
+              </button>
+            )}
+
             {qualityLevels.length > 0 && (
               <select 
                 value={currentQuality} 

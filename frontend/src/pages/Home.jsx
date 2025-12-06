@@ -63,12 +63,22 @@ const Home = () => {
     } else if (!user && !searchQuery && !genreParam && !typeParam) {
       // Load history from localStorage for non-logged in users
       try {
-        const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
-        setHistory(localHistory.slice(0, 10));
-        setWatchlist([]); // No local watchlist for now
+        const rawHistory = localStorage.getItem('watchHistory');
+        if (rawHistory) {
+          const parsed = JSON.parse(rawHistory);
+          if (Array.isArray(parsed)) {
+             setHistory(parsed.filter(item => item && (item.movieId || item.slug)).slice(0, 10));
+          } else {
+             setHistory([]);
+          }
+        } else {
+          setHistory([]);
+        }
       } catch (e) {
         console.error("Error loading local history:", e);
         setHistory([]);
+        // Optionally clear bad data
+        localStorage.removeItem('watchHistory');
       }
     } else {
       setHistory([]);
@@ -197,7 +207,7 @@ const Home = () => {
         } else {
              setFeaturedMovie(nextMovie);
         }
-      } catch (e) {
+      } catch {
         // console.warn("Could not fetch full details for featured movie, using basic info.");
         setFeaturedMovie(nextMovie);
       }
