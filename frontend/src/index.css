@@ -2231,3 +2231,112 @@ body {
     flex: 0 0 200px;
   }
 }
+
+/* --- Professional Footer Styles --- */
+.footer {
+  background-color: #080808; /* Deep black background matching modern aesthetics */
+  color: #999;
+  padding: 80px 0 40px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  border-top: 1px solid #1a1a1a;
+  margin-top: 80px;
+}
+
+.footer .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 60px;
+  gap: 50px;
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.footer-section:first-child {
+  flex: 2; /* Make logo section wider */
+  padding-right: 60px;
+}
+
+.footer-section .logo {
+  display: inline-block;
+  font-size: 28px;
+  font-weight: 900;
+  color: #e50914; /* Netflix Red */
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 24px;
+  text-decoration: none;
+}
+
+.footer-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #888;
+  max-width: 480px;
+  font-weight: 400;
+}
+
+.footer-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  letter-spacing: 1px;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-links a {
+  color: #888;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease, transform 0.2s ease;
+  width: fit-content;
+  font-weight: 500;
+}
+
+.footer-links a:hover {
+  color: #fff;
+  transform: translateX(4px);
+}
+
+.footer-bottom {
+  border-top: 1px solid #1a1a1a;
+  padding-top: 30px;
+  font-size: 13px;
+  color: #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  .footer-section:first-child {
+    padding-right: 0;
+  }
+  
+  .footer-bottom {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+}
