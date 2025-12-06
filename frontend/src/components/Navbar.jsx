@@ -322,10 +322,28 @@ const Navbar = () => {
           <a href="/?type=phim-bo" className={`nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); window.location.href = '/?type=phim-bo'; }}>
             Phim Bộ
           </a>
-          <Link to="/catalog" className={`nav-link ${location.pathname === '/catalog' ? 'active' : ''}`}>
+          <Link 
+            to="/catalog" 
+            className={`nav-link ${location.pathname === '/catalog' ? 'active' : ''}`}
+            onClick={(e) => {
+              if (location.pathname === '/catalog') {
+                e.preventDefault();
+                window.location.reload();
+              }
+            }}
+          >
             {t('explore_movies') || 'Khám Phá'}
           </Link>
-          <Link to="/schedule" className={`nav-link ${location.pathname === '/schedule' ? 'active' : ''}`}>
+          <Link 
+            to="/schedule" 
+            className={`nav-link ${location.pathname === '/schedule' ? 'active' : ''}`}
+            onClick={(e) => {
+              if (location.pathname === '/schedule') {
+                e.preventDefault();
+                window.location.reload();
+              }
+            }}
+          >
             {t('schedule') || 'Lịch Chiếu'}
           </Link>
           
@@ -569,19 +587,65 @@ const Navbar = () => {
                 </form>
             </div>
             
-            <Link to="/" className={`mobile-nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+            <Link 
+                to="/" 
+                className={`mobile-nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`} 
+                onClick={(e) => {
+                   if (location.pathname === '/' && !location.search) {
+                       e.preventDefault();
+                       window.location.reload();
+                   }
+                   setMobileMenuOpen(false);
+                }}
+            >
                 {t('home')}
             </Link>
-            <a href="/?type=phim-le" className={`mobile-nav-link ${location.search.includes('type=phim-le') ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); window.location.href = '/?type=phim-le'; }}>
+            <a 
+                href="/?type=phim-le" 
+                className={`mobile-nav-link ${location.search.includes('type=phim-le') ? 'active' : ''}`} 
+                onClick={(e) => { 
+                    e.preventDefault(); 
+                    window.location.href = '/?type=phim-le'; 
+                    setMobileMenuOpen(false); // Close menu
+                }}
+            >
                 Phim Lẻ
             </a>
-            <a href="/?type=phim-bo" className={`mobile-nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); window.location.href = '/?type=phim-bo'; }}>
+            <a 
+                href="/?type=phim-bo" 
+                className={`mobile-nav-link ${location.search.includes('type=phim-bo') ? 'active' : ''}`} 
+                onClick={(e) => { 
+                    e.preventDefault(); 
+                    window.location.href = '/?type=phim-bo'; 
+                    setMobileMenuOpen(false); // Close menu
+                }}
+            >
                 Phim Bộ
             </a>
-            <Link to="/catalog" className={`mobile-nav-link ${location.pathname === '/catalog' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+            <Link 
+                to="/catalog" 
+                className={`mobile-nav-link ${location.pathname === '/catalog' ? 'active' : ''}`} 
+                onClick={(e) => {
+                    if (location.pathname === '/catalog') {
+                        e.preventDefault();
+                        window.location.reload();
+                    }
+                    setMobileMenuOpen(false);
+                }}
+            >
                 {t('explore_movies') || 'Khám Phá'}
             </Link>
-            <Link to="/schedule" className={`mobile-nav-link ${location.pathname === '/schedule' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+            <Link 
+                to="/schedule" 
+                className={`mobile-nav-link ${location.pathname === '/schedule' ? 'active' : ''}`} 
+                onClick={(e) => {
+                    if (location.pathname === '/schedule') {
+                        e.preventDefault();
+                        window.location.reload();
+                    }
+                    setMobileMenuOpen(false);
+                }}
+            >
                 {t('schedule') || 'Lịch Chiếu'}
             </Link>
 
