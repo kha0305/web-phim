@@ -451,7 +451,20 @@ const MovieDetail = () => {
               <h3>{t('episodes')}</h3>
               {movie.episodes.map((server, idx) => (
                 <div key={idx} style={{marginBottom: '1rem'}}>
-                  <h4 style={{color: '#aaa', marginBottom: '0.5rem'}}>{server.server_name}</h4>
+                  <h4 style={{color: '#aaa', marginBottom: '0.5rem'}}>
+                    {(() => {
+                      const name = server.server_name;
+                      const type = name.match(/\((.*?)\)/)?.[1] || name.replace(/^#\S+\s*/, '').trim();
+                      
+                      // Only add accent info for Dub/Voice-over, not Subtitles
+                      if (type.toLowerCase().includes('lồng tiếng') || type.toLowerCase().includes('thuyết minh')) {
+                        if (name.includes('Hà Nội')) return `${type} (Giọng Bắc)`;
+                        if (name.includes('Sài Gòn') || name.includes('HCM')) return `${type} (Giọng Nam)`;
+                      }
+                      
+                      return type || 'Vietsub';
+                    })()}
+                  </h4>
                   <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
                     {server.server_data.map((ep) => {
                       // Create a unique ID for comparison that includes server info if possible, 

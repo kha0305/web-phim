@@ -22,6 +22,7 @@ const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const Catalog = React.lazy(() => import('./pages/Catalog'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const Schedule = React.lazy(() => import('./pages/Schedule'));
 
 const LoadingFallback = () => (
   <div className="loading-container">
@@ -48,6 +49,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/schedule" element={<Schedule />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

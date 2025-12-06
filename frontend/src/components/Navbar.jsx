@@ -325,6 +325,9 @@ const Navbar = () => {
           <Link to="/catalog" className={`nav-link ${location.pathname === '/catalog' ? 'active' : ''}`}>
             {t('explore_movies') || 'Khám Phá'}
           </Link>
+          <Link to="/schedule" className={`nav-link ${location.pathname === '/schedule' ? 'active' : ''}`}>
+            {t('schedule') || 'Lịch Chiếu'}
+          </Link>
           
           {user ? (
             <>
@@ -577,6 +580,9 @@ const Navbar = () => {
             </a>
             <Link to="/catalog" className={`mobile-nav-link ${location.pathname === '/catalog' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
                 {t('explore_movies') || 'Khám Phá'}
+            </Link>
+            <Link to="/schedule" className={`mobile-nav-link ${location.pathname === '/schedule' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                {t('schedule') || 'Lịch Chiếu'}
             </Link>
 
             <div className="mobile-divider"></div>
