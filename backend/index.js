@@ -1117,19 +1117,28 @@ app.get("/api/movies/:slug", async (req, res) => {
   try {
     let data;
     
-    // Try primary source (PhimAPI)
+    // Try primary source (IPHIM - Requested by user)
     try {
-      data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${slug}`);
+      data = await fetchFromAPI(`${IPHIM_BASE_URL}/phim/${slug}`);
     } catch (e) {
-      console.warn(`Primary API failed for ${slug}, trying fallback...`);
+      console.warn(`Primary API (IPHIM) failed for ${slug}, trying fallback...`);
     }
 
-    // Fallback to OPhim if primary fails or returns invalid status
+    // Fallback to PhimAPI
+    if (!data || !data.status) {
+      try {
+        data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${slug}`);
+      } catch (e) {
+        console.warn(`Fallback API (PhimAPI) failed for ${slug}`);
+      }
+    }
+
+    // Fallback to OPhim if others fail
     if (!data || !data.status) {
       try {
         data = await fetchFromAPI(`https://ophim1.com/phim/${slug}`);
       } catch (e) {
-        console.warn(`Fallback API failed for ${slug}`);
+        console.warn(`Fallback API (OPhim) failed for ${slug}`);
       }
     }
 
