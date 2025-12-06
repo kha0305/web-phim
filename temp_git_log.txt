@@ -1,0 +1,50 @@
+8f9a0f7 - 2025-12-07 00:55:54 +0700 - feat: Thêm các kiểu CSS toàn cục và thành phần MovieCard.
+500c7ed - 2025-12-07 00:46:29 +0700 - feat: Thêm các trang và thành phần UI cốt lõi bao gồm Trang chủ, Chi tiết phim, Navbar, Footer, MovieCard và CSS cơ bản.
+0675956 - 2025-12-07 00:37:14 +0700 - feat: Triển khai trang chủ với chức năng tải phim, lịch sử xem, danh sách yêu thích và các kiểu dáng responsive.
+5cfece2 - 2025-12-07 00:33:53 +0700 - feat: Triển khai trang chủ hiển thị phim, tìm kiếm, lọc và thiết lập kiểu dáng toàn cục.
+3d25699 - 2025-12-07 00:27:46 +0700 - feat: Thêm các thành phần UI ban đầu (Navbar, MovieCard, Footer) và kiểu dáng toàn cục cho ứng dụng.
+6cdcc6f - 2025-12-07 00:10:48 +0700 - Merge branch 'main' of https://github.com/kha0305/web-phim
+bc3a1b5 - 2025-12-07 00:10:39 +0700 - feat: Triển khai các trang và thành phần giao diện người dùng chính cho ứng dụng xem phim.
+4e8ec52 - 2025-12-06 23:31:10 +0700 - feat: Thêm file `index.css` mới để định nghĩa giao diện người dùng với chủ đề hiện đại, năng động.
+2cb5ac1 - 2025-12-06 23:21:09 +0700 - feat: Thêm các kiểu dáng CSS ban đầu cho giao diện người dùng nền tảng streaming.
+e25a84e - 2025-12-06 23:17:19 +0700 - feat: Thêm file `index.css` khởi tạo chủ đề UI hiện đại, bao gồm các kiểu toàn cục, thanh điều hướng và thẻ phim.
+7bcecae - 2025-12-06 23:06:23 +0700 - feat: Thêm các kiểu dáng UI cơ bản và thành phần MovieCard.
+95b8013 - 2025-12-06 23:04:39 +0700 - feat: Khởi tạo toàn bộ kiểu dáng CSS cho ứng dụng frontend.
+5a001b2 - 2025-12-06 22:57:33 +0700 - feat: Thêm các kiểu CSS toàn cục và thiết kế cho các thành phần UI chính như navbar, hero, lưới phim và sidebar.
+a20de3a - 2025-12-06 22:54:10 +0700 - feat: Khởi tạo các tệp CSS cơ bản để thiết lập kiểu dáng toàn cục và bố cục giao diện người dùng cho ứng dụng.
+00b1ed6 - 2025-12-06 22:42:03 +0700 - feat: Thêm file `index.css` chứa các kiểu dáng toàn cục và thành phần UI chính cho ứng dụng.
+bb46cd8 - 2025-12-06 22:37:23 +0700 - feat: Thêm các kiểu dáng CSS toàn cục và các thành phần UI cơ bản cho giao diện người dùng.
+646c312 - 2025-12-06 22:32:23 +0700 - feat: Khởi tạo các kiểu CSS toàn cục và bố cục cơ bản cho giao diện người dùng.
+2be368a - 2025-12-06 22:28:21 +0700 - feat: Khởi tạo tệp `index.css` với các kiểu dáng toàn cục và thành phần giao diện người dùng.
+6c3550c - 2025-12-06 22:22:53 +0700 - feat: Thêm file CSS toàn cục định nghĩa các biến, kiểu dáng cơ bản và các thành phần UI chính cho giao diện người dùng.
+2e0ed9a - 2025-12-06 22:15:55 +0700 - feat: Thêm component MovieCard hiển thị thông tin phim và chức năng yêu thích.
+3f143d5 - 2025-12-06 22:10:28 +0700 - feat: Thêm thành phần VideoPlayer và các trang Home, MovieDetail.
+4b329c9 - 2025-12-06 21:54:40 +0700 - feat: Thêm CSS cho thành phần trình phát video, bao gồm các điều khiển tùy chỉnh, thanh tiến trình, cài đặt và hiệu ứng động.
+33ffd2b - 2025-12-06 21:48:33 +0700 - feat: Thêm thành phần VideoPlayer mới với các điều khiển tùy chỉnh, hỗ trợ HLS và phụ đề.
+c686782 - 2025-12-06 21:43:04 +0700 - feat: triển khai trình phát video mới với các điều khiển tùy chỉnh, hỗ trợ HLS và phụ đề.
+877edcd - 2025-12-06 21:37:10 +0700 - feat: Thêm cấu trúc frontend ban đầu với React, Vite, các trang và thành phần UI chính.
+8a85aea - 2025-12-06 20:48:25 +0700 - feat: Triển khai thành phần trình phát video HLS toàn diện với các điều khiển nâng cao và hỗ trợ phụ đề.
+f32d9e4 - 2025-12-06 20:45:42 +0700 - feat: Thêm component VideoPlayer tùy chỉnh hỗ trợ HLS và trang MovieDetail.
+05d9a17 - 2025-12-06 20:22:17 +0700 - feat: Thêm thành phần trình phát video tùy chỉnh và trang chi tiết phim.
+38c1f23 - 2025-12-06 20:09:47 +0700 - Merge branch 'main' of https://github.com/kha0305/web-phim
+7d5dce6 - 2025-12-06 20:06:07 +0700 - feat: Thêm component MovieCard mới để hiển thị thông tin phim và chức năng yêu thích.
+d80544c - 2025-12-06 20:06:07 +0700 - feat: Thêm trang Lịch sử xem phim, cho phép người dùng xem, xóa từng mục hoặc xóa toàn bộ lịch sử xem.
+e963037 - 2025-12-06 18:05:21 +0700 - feat: Thêm trang chi tiết phim với trình phát video, chức năng lưu lịch sử xem và trang lịch sử xem.
+6e76395 - 2025-12-06 17:59:41 +0700 - feat: Triển khai các thành phần giao diện người dùng chính như Navbar (với tìm kiếm, thông báo), VideoPlayer và BottomNav, cùng với CSS cơ bản.
+e9f1049 - 2025-12-06 13:33:45 +0700 - feat: Add script to fetch and log film data from iphim.cc API.
+c29aca2 - 2025-12-06 13:06:42 +0700 - feat: Implement initial backend with user authentication, password reset via OTP, database setup, and API performance enhancements.
+715fc40 - 2025-12-05 22:07:32 +0700 - feat: Introduce frontend Navbar with search, user menu, and notifications, a VideoPlayer component, and the initial backend application structure.
+92b441c - 2025-12-05 21:52:58 +0700 - feat: Implement initial backend with user authentication, password reset via email, API caching, and database synchronization.
+b975f3a - 2025-12-05 21:45:17 +0700 - feat: Implement a new Admin Dashboard page with statistics display and system notification functionality.
+c297390 - 2025-12-05 21:41:33 +0700 - feat: initialize backend API with user authentication, password reset, email services, and API caching.
+2d65ac8 - 2025-12-05 21:38:53 +0700 - feat: introduce i18n translations for frontend and a backend script to promote users to admin
+b5d3e8b - 2025-12-05 21:28:39 +0700 - feat: Implement core movie streaming application structure with new backend models for users, history, comments, and frontend pages for home, login, catalog, and movie details.
+900766a - 2025-12-05 20:56:39 +0700 - feat: Establish initial backend API with user authentication, password reset, movie data fetching, and caching.
+bc37e31 - 2025-12-05 20:50:15 +0700 - feat: Implement Navbar component with search functionality, suggestions, history, user authentication, language toggle, and mobile responsiveness.
+2bbb53d - 2025-12-05 20:46:33 +0700 - feat: Initialize frontend application with user authentication, basic structure, and internationalization.
+c5ea1dd - 2025-12-05 19:20:08 +0700 - feat: Implement core backend data models and frontend UI for movie browsing and user history.
+5f6e33f - 2025-12-05 13:28:28 +0700 - feat: Add MovieDetail page with video playback, watch history, and watchlist management, along with a new VideoPlayer component.
+213d2f0 - 2025-12-05 13:17:44 +0700 - feat: implement initial backend API including user authentication, password reset, and core data services.
+2f677ed - 2025-12-05 13:03:00 +0700 - feat: Add initial backend API with user authentication, password reset, database models, email services, and API caching.
+d546252 - 2025-12-05 12:56:21 +0700 - feat: Implement watch history page, movie detail page with integrated video player, and watch progress tracking for both logged-in and guest users.
+f2d4297 - 2025-12-05 12:49:10 +0700 - feat: add custom video player component with HLS support, custom controls, and state management.
