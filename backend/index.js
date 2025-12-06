@@ -910,6 +910,30 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
   }
 });
 
+app.put("/api/notifications/read-all", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // 1. Mark all personal notifications as read
+        await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
+
+        // 2. Find all unread system notifications and mark them as read
+        const systemNotifs = await Notification.findAll({ where: { userId: null } });
+        
+        // We could optimize this, but loop is fine for now
+        for (const n of systemNotifs) {
+            await NotificationRead.findOrCreate({
+                where: { userId, notificationId: n.id }
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to mark all as read" });
+    }
+});
+
 app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -934,30 +958,6 @@ app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to update notification" });
   }
-});
-
-app.put("/api/notifications/read-all", authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        
-        // 1. Mark all personal notifications as read
-        await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
-
-        // 2. Find all unread system notifications and mark them as read
-        const systemNotifs = await Notification.findAll({ where: { userId: null } });
-        
-        // We could optimize this, but loop is fine for now
-        for (const n of systemNotifs) {
-            await NotificationRead.findOrCreate({
-                where: { userId, notificationId: n.id }
-            });
-        }
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to mark all as read" });
-    }
 });
 
 // --- MOVIE ROUTES (IPHIM & PHIMAPI) ---

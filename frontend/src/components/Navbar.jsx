@@ -474,7 +474,16 @@ const Navbar = () => {
                 }}
               >
                  <div style={{position: 'relative'}}>
-                     <span style={{fontSize: '1.2rem', color: 'white'}}>🔔</span>
+                     <img 
+                        src="/icons/bell.png" 
+                        alt="Notifications" 
+                        style={{
+                            width: '24px', 
+                            height: '24px', 
+                            objectFit: 'contain',
+                            filter: 'invert(1)' // Make black icon white
+                        }} 
+                     />
                      {unreadCount > 0 && (
                          <span style={{
                              position: 'absolute',
