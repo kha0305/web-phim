@@ -59,6 +59,17 @@ const authenticateToken = (req, res, next) => {
 const apiCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 60 minutes
 
+// Optimization: Garbage Collection for Cache (Prevents RAM overflow)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of apiCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      apiCache.delete(key);
+    }
+  }
+  // console.log("Cache Cleaned. Current size:", apiCache.size);
+}, 10 * 60 * 1000); // Run every 10 minutes
+
 // Helper function for API requests with caching
 // Helper function for API requests with Stale-While-Revalidate caching
 const fetchFromAPI = async (url) => {
@@ -869,11 +880,17 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
     });
 
     // 2. Get read status for system notifications
-    const readRecords = await NotificationRead.findAll({
-      where: { userId },
-      attributes: ['notificationId']
-    });
-    const readIds = new Set(readRecords.map(r => r.notificationId));
+    let readIds = new Set();
+    try {
+      const readRecords = await NotificationRead.findAll({
+        where: { userId },
+        attributes: ['notificationId']
+      });
+      readIds = new Set(readRecords.map(r => r.notificationId));
+    } catch (dbError) {
+      console.warn("NotificationRead table might be missing or error:", dbError.message);
+      // Treat as empty set, don't crash
+    }
 
     // 3. Merge data
     const result = notifications.map(n => {
@@ -965,12 +982,12 @@ app.get("/api/countries", async (req, res) => {
   }
 });
 
-// Get Movies by Genre
+// Get Movies by Genre (Use IPHIM as primary because PHIMAPI is giving 404s)
 app.get("/api/movies/genre/:slug", async (req, res) => {
   try {
     const page = req.query.page || 1;
     const { slug } = req.params;
-    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/the-loai/${slug}?page=${page}`);
+    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/the-loai/${slug}?page=${page}`);
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch movies by genre" });
@@ -982,7 +999,7 @@ app.get("/api/movies/country/:slug", async (req, res) => {
   try {
     const page = req.query.page || 1;
     const { slug } = req.params;
-    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/quoc-gia/${slug}?page=${page}`);
+    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/quoc-gia/${slug}?page=${page}`);
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch movies by country" });
@@ -1064,17 +1081,7 @@ app.get("/api/movies/top-viewed", async (req, res) => {
   }
 });
 
-// Get Movies by Genre
-app.get("/api/movies/genre/:genreSlug", async (req, res) => {
-  try {
-    const { genreSlug } = req.params;
-    const page = req.query.page || 1;
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/the-loai/${genreSlug}?page=${page}`);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch movies by genre" });
-  }
-});
+
 
 // Get Movies by List (Phim Le, Phim Bo, etc.)
 app.get("/api/movies/list/:listSlug", async (req, res) => {
@@ -1144,9 +1151,32 @@ app.get("/api/movies/:slug", async (req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
+  const cluster = require('cluster');
+  const os = require('os');
+
+  // Multi-core Clustering Optimization
+  const numCPUs = os.cpus().length;
+
+  if (cluster.isMaster) {
+    console.log(`Master process ${process.pid} is running`);
+    console.log(`Detected ${numCPUs} CPU cores. Forking workers...`);
+
+    // Fork workers
+    for (let i = 0; i < numCPUs; i++) {
+      cluster.fork();
+    }
+
+    // Respawn worker if it dies
+    cluster.on('exit', (worker, code, signal) => {
+      console.log(`Worker ${worker.process.pid} died. Respawning...`);
+      cluster.fork();
+    });
+  } else {
+    // Workers share the TCP connection
+    app.listen(PORT, () => {
+      console.log(`Worker ${process.pid} started and listening on port ${PORT}`);
+    });
+  }
 }
 
 module.exports = app;
