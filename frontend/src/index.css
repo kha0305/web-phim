@@ -2340,3 +2340,11 @@ body {
     text-align: center;
   }
 }
+
+/* Video Player Dropdown Fix */
+.speed-select option, 
+.quality-select option {
+  background-color: #222; /* Dark background */
+  color: white;           /* White text */
+  padding: 5px;
+}
