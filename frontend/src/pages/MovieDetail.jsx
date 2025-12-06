@@ -392,6 +392,14 @@ const MovieDetail = () => {
               <span className="stat-label">{t('quality')}</span>
               <span className="stat-value">{movie.quality} - {movie.lang}</span>
             </div>
+            {(movie.notify || movie.showtimes) && (
+              <div className="stat-item">
+                <span className="stat-label">{t('schedule')}</span>
+                <span className="stat-value" style={{color: '#4caf50', fontWeight: '600'}}>
+                  {movie.notify || movie.showtimes}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="genres">
