@@ -171,6 +171,17 @@ const MovieDetail = () => {
         
         // Data Processing: Fix Domains, Filter Bad Sources, Sort
         if (movieData.episodes && Array.isArray(movieData.episodes)) {
+           // HOTFIX: Spy x Family (Gia Dinh Diep Vien) Season 3 Episode 10 Subtitle Error
+           // Replace with user provided link
+           if (movieData.name.toLowerCase().includes('gia đình điệp viên') || movieData.slug.includes('spy-x-family')) {
+               movieData.episodes.forEach(server => {
+                   server.server_data.forEach(ep => {
+                       if (ep.name === '10' || ep.slug.endsWith('tap-10')) {
+                           ep.link_m3u8 = 'https://vip.opstream12.com/20251207/30579_918b71f2/index.m3u8';
+                       }
+                   });
+               });
+           }
            // 0. FIX DOMAINS & CLEANUP
            movieData.episodes.forEach(server => {
               // Filter out broken PhimAPI links
