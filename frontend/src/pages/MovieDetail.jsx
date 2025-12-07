@@ -172,6 +172,27 @@ const fetchMovieDetail = async () => {
         
         // Prioritize "opstream" / "vip" servers and filter out "player.phimapi.com"
         if (movieData.episodes && Array.isArray(movieData.episodes)) {
+           // 0. FIX DOMAINS & FORCE EMBED (User report: share link works, HLS fails)
+           movieData.episodes.forEach(server => {
+              server.server_data.forEach(ep => {
+                  const isOpstream = (ep.link_m3u8 && ep.link_m3u8.includes('opstream')) || 
+                                     (ep.link_embed && ep.link_embed.includes('opstream'));
+                  
+                  if (isOpstream) {
+                      // Fix domain in embed to vip.opstream12.com
+                      if (ep.link_embed) {
+                          ep.link_embed = ep.link_embed.replace(/vip\.opstream\d+\.com/, 'vip.opstream12.com');
+                          // Also ensure we use the 'share' format if it wasn't already? 
+                          // The API usually gives correct path "https://vip.opstream12.com/share/..."
+                      }
+
+                      // Force use of Iframe (link_embed) by nullifying m3u8
+                      // Opstream HLS often has CORS issues on 3rd party sites
+                      ep.link_m3u8 = null;
+                  }
+              });
+           });
+           
            // 1. Sort servers: Favored domains first
            movieData.episodes.sort((a, b) => {
               const checkEp = (server) => server.server_data.some(ep => 
@@ -184,16 +205,19 @@ const fetchMovieDetail = async () => {
               return 0;
            });
 
-           // 2. Remove purely 'player.phimapi.com' links if they are problematic (User request)
-           // Only do this if we have alternatives, OR just trust the user that they are broken
+           // 2. Deprioritize 'player.phimapi.com' links (move to bottom) instead of removing
+           // This ensures we still have a fallback if the VIP streams fail (404)
            movieData.episodes.forEach(server => {
-              server.server_data = server.server_data.filter(ep => {
-                 const isPhimApi = ep.link_m3u8 && ep.link_m3u8.includes('player.phimapi.com');
-                 return !isPhimApi;
+              server.server_data.sort((a, b) => {
+                 const isPhimApiA = a.link_m3u8 && a.link_m3u8.includes('player.phimapi.com');
+                 const isPhimApiB = b.link_m3u8 && b.link_m3u8.includes('player.phimapi.com');
+                 if (isPhimApiA && !isPhimApiB) return 1;
+                 if (!isPhimApiA && isPhimApiB) return -1;
+                 return 0; // Maintain order otherwise
               });
            });
            
-           // Cleanup empty servers
+           // Cleanup empty servers (just in case, though now we aren't deleting)
            movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
         }
 
