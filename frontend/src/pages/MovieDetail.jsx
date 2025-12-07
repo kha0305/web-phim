@@ -591,7 +591,11 @@ const MovieDetail = () => {
                     if (totalDuration) totalDurationRef.current = totalDuration;
                   }}
                   skipSegments={[
-                    { start: 0, end: 60, label: "Bỏ qua giới thiệu" },
+                    { 
+                      start: 0, 
+                      end: (movie.name.toLowerCase().includes('gia đình điệp viên') || movie.slug.includes('spy-x-family')) ? 90 : 60, 
+                      label: "Bỏ qua giới thiệu" 
+                    },
                   ]}
                   onNext={() => {
                     // Find current server and index
