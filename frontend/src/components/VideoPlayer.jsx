@@ -57,6 +57,14 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         
         // Disable subtitles by default to prevent thumbnail tracks (sprite maps) from showing as text
         hls.subtitleTrack = -1;
+        hls.subtitleDisplay = false;
+        
+        // Also force disable any native text tracks potentially created
+        if (videoRef.current && videoRef.current.textTracks) {
+           for (let i = 0; i < videoRef.current.textTracks.length; i++) {
+             videoRef.current.textTracks[i].mode = 'disabled';
+           }
+        }
       });
       
       hls.on(Hls.Events.ERROR, function (event, data) {
