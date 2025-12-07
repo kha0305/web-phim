@@ -36,7 +36,9 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     let hls;
     if (Hls.isSupported() && src) {
       hls = new Hls({
-        startPosition: initialTime
+        startPosition: initialTime,
+        enableWebVTT: false, // Disable native WebVTT parsing to prevent garbage text (sprites)
+        subtitleStartLoad: false, // Don't load subtitle fragments
       });
       hls.loadSource(src);
       hls.attachMedia(videoRef.current);
@@ -55,26 +57,12 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         // Ensure volume is applied after HLS attach
         videoRef.current.volume = volume;
         
-        // Disable subtitles by default to prevent thumbnail tracks (sprite maps) from showing as text
+        // Double check disabling to be sure
         hls.subtitleTrack = -1;
         hls.subtitleDisplay = false;
-        
-        // Also force disable any native text tracks potentially created
-        if (videoRef.current && videoRef.current.textTracks) {
-           const disableTracks = () => {
-              for (let i = 0; i < videoRef.current.textTracks.length; i++) {
-                videoRef.current.textTracks[i].mode = 'disabled';
-              }
-           };
-
-           // Disable initial tracks
-           disableTracks();
-
-           // Listen for new tracks added asynchronously and disable them
-           videoRef.current.textTracks.addEventListener('addtrack', disableTracks);
-        }
       });
       
+      // Handle network errors to resume playback if needed
       hls.on(Hls.Events.ERROR, function (event, data) {
         if (data.fatal) {
           switch (data.type) {
