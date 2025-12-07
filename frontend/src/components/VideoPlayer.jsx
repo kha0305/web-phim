@@ -54,6 +54,9 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         }
         // Ensure volume is applied after HLS attach
         videoRef.current.volume = volume;
+        
+        // Disable subtitles by default to prevent thumbnail tracks (sprite maps) from showing as text
+        hls.subtitleTrack = -1;
       });
       
       hls.on(Hls.Events.ERROR, function (event, data) {
