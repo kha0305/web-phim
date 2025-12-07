@@ -193,11 +193,13 @@ const fetchMovieDetail = async () => {
               });
            });
            
-           // 1. Sort servers: Favored domains first
+           // 1. Sort servers: Favored domains first (Opstream/VIP)
            movieData.episodes.sort((a, b) => {
-              const checkEp = (server) => server.server_data.some(ep => 
-                  ep.link_m3u8 && (ep.link_m3u8.includes('opstream') || ep.link_m3u8.includes('vip'))
-              );
+              const checkEp = (server) => server.server_data.some(ep => {
+                  // Check both HLS and Embed links (since we forced some to Embed)
+                  const url = ep.link_m3u8 || ep.link_embed || '';
+                  return url.includes('opstream') || url.includes('vip');
+              });
               const aGood = checkEp(a);
               const bGood = checkEp(b);
               if (aGood && !bGood) return -1;
