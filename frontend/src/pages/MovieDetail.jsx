@@ -454,27 +454,20 @@ const MovieDetail = () => {
                   <h4 style={{color: '#aaa', marginBottom: '0.5rem'}}>
                     {(() => {
                       const name = server.server_name || '';
-                      
-                      // Prioritize identifying known types
                       const lowerName = name.toLowerCase();
+                      
+                      // known types customization (optional, mostly for specific accents)
                       if (lowerName.includes('lồng tiếng')) {
-                        let label = "Lồng Tiếng";
-                        if (name.includes('Hà Nội')) label += " (Giọng Bắc)";
-                        else if (name.includes('Sài Gòn') || name.includes('HCM')) label += " (Giọng Nam)";
-                        return label;
+                         if (name.includes('Hà Nội')) return "Lồng Tiếng (Giọng Bắc)";
+                         if (name.includes('Sài Gòn') || name.includes('HCM')) return "Lồng Tiếng (Giọng Nam)";
                       }
-                      if (lowerName.includes('thuyết minh')) return "Thuyết Minh";
-                      if (lowerName.includes('vietsub')) return t('vietsub');
+                      
+                      // If name is reasonably short and not a URL/filename, use it directly to preserve "Vietsub #1", "VIP", etc.
+                      if (name.length < 30 && !name.includes('.jpg') && !name.includes('.png') && !name.includes('http')) {
+                          return name;
+                      }
 
-                      // Fallback cleaning
-                      const type = name.match(/\((.*?)\)/)?.[1] || name.replace(/^#\S+\s*/, '').trim();
-                      
-                      // Filter out potential garbage (filenames, too long strings)
-                      if (type.length > 20 || type.includes('.jpg') || type.includes('.png') || type.includes('http')) {
-                          return t('vietsub');
-                      }
-                      
-                      return type || t('vietsub');
+                      return t('vietsub');
                     })()}
                   </h4>
                   <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
