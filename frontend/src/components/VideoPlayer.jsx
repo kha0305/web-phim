@@ -490,12 +490,13 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       {showSkipButton && (
         <button className="skip-btn" onClick={handleSkip} 
           style={{
-             position: 'absolute', bottom: '80px', right: '20px', padding: '10px 20px',
-             backgroundColor: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)',
-             color: 'white', borderRadius: '4px', cursor: 'pointer', zIndex: 20,
-             backdropFilter: 'blur(5px)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px'
+             position: 'absolute', bottom: '120px', right: '20px', padding: '12px 24px',
+             backgroundColor: 'rgba(0, 0, 0, 0.8)', border: '1px solid var(--primary-color)',
+             color: 'var(--primary-color)', borderRadius: '6px', cursor: 'pointer', zIndex: 100,
+             fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px',
+             boxShadow: '0 4px 12px rgba(0,0,0,0.5)', transition: 'all 0.2s ease'
           }}>
-          {showSkipButton.label || "Bỏ qua"} <svg viewBox="0 0 24 24" fill="white" width="16" height="16"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+          {showSkipButton.label || "Bỏ qua"} <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
         </button>
       )}
 
