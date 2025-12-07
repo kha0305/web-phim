@@ -294,7 +294,14 @@ const MovieDetail = () => {
     }
     
     setInitialProgress(startAt);
-    setCurrentEpisode({ ...episode, server_name: serverName });
+    
+    // Domain override for better performance (User Request)
+    let finalEpisode = { ...episode, server_name: serverName };
+    if (finalEpisode.link_m3u8) {
+      finalEpisode.link_m3u8 = finalEpisode.link_m3u8.replace(/https:\/\/[^/]+/, 'https://vip.opstream12.com');
+    }
+    
+    setCurrentEpisode(finalEpisode);
     setShowPlayer(true);
     startTimeRef.current = Date.now();
     progressRef.current = startAt;
