@@ -179,27 +179,30 @@ const MovieDetail = () => {
                   return !url.includes('player.phimapi.com');
               });
 
-              // Fix Opstream/Ophim links to Force Embed Iframe
-              server.server_data.forEach(ep => {
-                  const embed = ep.link_embed || '';
-                  if (embed.includes('opstream') || embed.includes('ophim') || embed.includes('/share/')) {
-                      // Standardize domain to vip.opstream12.com
-                      ep.link_embed = embed.replace(/https?:\/\/[^/]+\/share\//, 'https://vip.opstream12.com/share/');
-                      ep.link_m3u8 = null; 
-                  }
-              });
+              // We no longer force opstream to embed, allowing M3U8 if available
+              // But we can ensure standard https if needed, or leave as is.
            });
            
            movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
 
-           // 1. Sort servers: Prioritize vip.opstream12.com
+           // 1. Sort servers: Prioritize Vietsub #1 / Opstream / KKPhim with M3U8
            movieData.episodes.sort((a, b) => {
-              const checkEp = (server) => server.server_data.some(ep => (ep.link_embed || '').includes('vip.opstream12.com'));
-              const aGood = checkEp(a);
-              const bGood = checkEp(b);
-              if (aGood && !bGood) return -1;
-              if (!aGood && bGood) return 1;
-              return 0;
+              // Helper to check quality/priority of a server
+              const getScore = (server) => {
+                  const name = (server.server_name || '').toLowerCase();
+                  const data = server.server_data || [];
+                  const hasM3u8 = data.some(ep => ep.link_m3u8 && (ep.link_m3u8.includes('opstream') || ep.link_m3u8.includes('kkphim')));
+                  const hasVip = data.some(ep => (ep.link_embed||'').includes('vip.opstream') || (ep.link_m3u8||'').includes('vip.opstream'));
+                  
+                  let score = 0;
+                  if (hasM3u8) score += 10;
+                  if (hasVip) score += 5;
+                  if (name.includes('vietsub #1')) score += 3;
+                  if (name.includes('vip')) score += 2;
+                  return score;
+              };
+
+              return getScore(b) - getScore(a);
            });
         }
 
