@@ -165,10 +165,39 @@ const MovieDetail = () => {
   }, [showPlayer, saveHistory, user, id, currentEpisode]);
 
   useEffect(() => {
-    const fetchMovieDetail = async () => {
+const fetchMovieDetail = async () => {
       try {
         const response = await axios.get(`/movies/${id}`);
-        setMovie(response.data);
+        let movieData = response.data;
+        
+        // Prioritize "opstream" / "vip" servers and filter out "player.phimapi.com"
+        if (movieData.episodes && Array.isArray(movieData.episodes)) {
+           // 1. Sort servers: Favored domains first
+           movieData.episodes.sort((a, b) => {
+              const checkEp = (server) => server.server_data.some(ep => 
+                  ep.link_m3u8 && (ep.link_m3u8.includes('opstream') || ep.link_m3u8.includes('vip'))
+              );
+              const aGood = checkEp(a);
+              const bGood = checkEp(b);
+              if (aGood && !bGood) return -1;
+              if (!aGood && bGood) return 1;
+              return 0;
+           });
+
+           // 2. Remove purely 'player.phimapi.com' links if they are problematic (User request)
+           // Only do this if we have alternatives, OR just trust the user that they are broken
+           movieData.episodes.forEach(server => {
+              server.server_data = server.server_data.filter(ep => {
+                 const isPhimApi = ep.link_m3u8 && ep.link_m3u8.includes('player.phimapi.com');
+                 return !isPhimApi;
+              });
+           });
+           
+           // Cleanup empty servers
+           movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
+        }
+
+        setMovie(movieData);
       } catch (error) {
         console.error("Error fetching movie detail:", error);
       } finally {
@@ -295,13 +324,8 @@ const MovieDetail = () => {
     
     setInitialProgress(startAt);
     
-    // Domain override for better performance (User Request)
-    let finalEpisode = { ...episode, server_name: serverName };
-    if (finalEpisode.link_m3u8) {
-      finalEpisode.link_m3u8 = finalEpisode.link_m3u8.replace(/https:\/\/[^/]+/, 'https://vip.opstream12.com');
-    }
-    
-    setCurrentEpisode(finalEpisode);
+    // Reverted domain override due to loading issues - using original link
+    setCurrentEpisode({ ...episode, server_name: serverName });
     setShowPlayer(true);
     startTimeRef.current = Date.now();
     progressRef.current = startAt;
