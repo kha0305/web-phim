@@ -61,9 +61,17 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         
         // Also force disable any native text tracks potentially created
         if (videoRef.current && videoRef.current.textTracks) {
-           for (let i = 0; i < videoRef.current.textTracks.length; i++) {
-             videoRef.current.textTracks[i].mode = 'disabled';
-           }
+           const disableTracks = () => {
+              for (let i = 0; i < videoRef.current.textTracks.length; i++) {
+                videoRef.current.textTracks[i].mode = 'disabled';
+              }
+           };
+
+           // Disable initial tracks
+           disableTracks();
+
+           // Listen for new tracks added asynchronously and disable them
+           videoRef.current.textTracks.addEventListener('addtrack', disableTracks);
         }
       });
       

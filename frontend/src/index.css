@@ -1,5 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
 
+/* Hide native video text tracks (cues) to prevent thumbnail sprite maps from showing as text */
+video::cue {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 :root {
   --primary-color: #e50914;
   --primary-hover: #f40612;
