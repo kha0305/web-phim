@@ -453,7 +453,7 @@ const MovieDetail = () => {
           <div className="actions">
             {movie.episodes && movie.episodes.length > 0 ? (
                <button className="btn btn-primary" onClick={() => handleWatch(movie.episodes[0].server_data[0], movie.episodes[0].server_name)}>
-                ▶ {t('watch_now')}
+                 {t('watch_now')}
               </button>
             ) : (
                <button className="btn btn-primary" disabled>
@@ -467,7 +467,7 @@ const MovieDetail = () => {
                 style={{ marginLeft: '1rem', borderColor: '#e50914', color: '#e50914' }}
                 onClick={() => window.open(movie.trailer_url, '_blank')}
               >
-                🎬 Trailer
+                Trailer
               </button>
             )}
            
@@ -480,7 +480,7 @@ const MovieDetail = () => {
               }} 
               onClick={toggleWatchlist}
             >
-              {inWatchlist ? '✓ ' + t('added_to_list') : '+ ' + t('add_to_list')}
+               {inWatchlist ? t('added_to_list') : t('add_to_list')}
             </button>
           </div>
           
@@ -655,7 +655,7 @@ const MovieDetail = () => {
                         {movie.year || (movie.release_date ? new Date(movie.release_date).getFullYear() : (movie.name && movie.name.match(/\((\d{4})\)/) ? movie.name.match(/\((\d{4})\)/)[1] : (movie.time || new Date().getFullYear())))}
                       </div>
                       <div className="sidebar-views">
-                        <span>👁</span> {movie.viewCount || 0}
+                         {movie.viewCount || 0}
                       </div>
                     </div>
                   </div>

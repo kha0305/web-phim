@@ -101,8 +101,8 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     if (Hls.isSupported() && src) {
       hls = new Hls({
         startPosition: initialTime,
-        enableWebVTT: false, // Keep disabled to prevent garbage text from HLS
-        subtitleStartLoad: false,
+        enableWebVTT: true,
+        subtitleStartLoad: true,
         manifestLoadingTimeOut: 10000,
         manifestLoadingMaxRetry: 3,
         levelLoadingTimeOut: 10000,
@@ -117,16 +117,44 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
           height: level.height,
           bitrate: level.bitrate
         }));
+        // Parse HLS Subtitles
+        const hlsSubs = [];
+        if (hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+            hls.subtitleTracks.forEach((t, i) => {
+                hlsSubs.push({
+                    label: t.name || `Sub ${i + 1} (${t.lang || 'unk'})`,
+                    id: i,
+                    index: i,
+                    type: 'hls',
+                    lang: t.lang,
+                    isHls: true
+                });
+            });
+        }
+
         setQualityLevels(levels);
-        hlsRef.current = hls;
+        hlsRef.current = hls; // Ensure ref is set before using in logic below? No, ref update is async safe but here immediate.
+        
+        // Update Subtitles State
+        setSubtitles(hlsSubs);
+
+        // Auto-select Vietnamese or First sub
+        if (hlsSubs.length > 0) {
+            const viIndex = hlsSubs.findIndex(s => s.lang === 'vi' || (s.label && s.label.toLowerCase().includes('viet')));
+            const initialSub = viIndex !== -1 ? viIndex : 0;
+            setActiveSubtitle(initialSub);
+            hls.subtitleTrack = hlsSubs[initialSub].index;
+            hls.subtitleDisplay = true;
+        } else {
+             hls.subtitleTrack = -1;
+             hls.subtitleDisplay = false;
+        }
+
         if (initialTime > 0) {
            videoRef.current.currentTime = initialTime;
         }
         videoRef.current.volume = volume;
         videoRef.current.playbackRate = playbackRate;
-        
-        hls.subtitleTrack = -1;
-        hls.subtitleDisplay = false;
       });
       
       hls.on(Hls.Events.ERROR, function (event, data) {
@@ -357,39 +385,92 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         crossOrigin="anonymous" // Essential for tracks
       >
         {subtitles.map((sub, index) => (
-           <track
-             key={index}
-             kind="subtitles"
-             label={sub.label}
-             src={sub.src}
-             srcLang={sub.lang}
-             default={index === activeSubtitle}
-             mode={index === activeSubtitle ? 'showing' : 'hidden'} 
-           />
+           !sub.isHls && (
+             <track
+               key={index}
+               kind="subtitles"
+               label={sub.label}
+               src={sub.src}
+               srcLang={sub.lang}
+               default={index === activeSubtitle}
+             />
+           )
         ))}
         {/* We manipulate mode manually, but React needs default/mode prop hint */}
       </video>
 
-      {/* Manual Track Mode Update Effect */}
       {useEffect(() => {
+         // Sync HLS
+         if (hlsRef.current) {
+             const currentSub = subtitles[activeSubtitle];
+             if (currentSub && currentSub.isHls) {
+                 hlsRef.current.subtitleTrack = currentSub.index;
+                 hlsRef.current.subtitleDisplay = true;
+             } else {
+                 hlsRef.current.subtitleTrack = -1;
+                 hlsRef.current.subtitleDisplay = false;
+             }
+         }
+
+         // Sync Native Tracks
          if (videoRef.current) {
             const tracks = videoRef.current.textTracks;
             for (let i = 0; i < tracks.length; i++) {
                const track = tracks[i];
-               // If it's one of ours (based on loop index or label)
-               // Simple logic: disable all, enable active
-               if (subtitles[i] && subtitles[i].src === track.getCueAsHTML) { /* match? hard to match object */ }
+               // If using HLS sub, hide all native text tracks (unless HLS uses native tracks?)
+               // HLS.js with enableWebVTT: true might be piping cues to a native track.
+               // Check if this track corresponds to our active custom subtitle.
                
-               // Better: Rely on index if exact match, or just use rendering
-               // Actually for tracks added via React, we might rely on the prop 'mode' if supported or manual
-               // React <track> 'mode' support is tricky. Best to set mode manually:
+               const currentSub = subtitles[activeSubtitle];
                
-               if (activeSubtitle === -1) {
-                  track.mode = 'hidden'; 
-               } else if (i === activeSubtitle) {
-                   track.mode = 'showing';
+               // If active sub is Custom (not HLS) 
+               if (currentSub && !currentSub.isHls) {
+                   // Compare loosely or by index similarity if we mapped them 1:1. 
+                   // However, native tracks list might include HLS tracks if enableWebVTT is true!
+                   // Simpler approach: 
+                   // If HLS sub is active, we rely on HLS display (which might be native or canvas).
+                   // If Custom sub is active, we find the track with matching src/label and show it.
+                   
+                   // Note: track.src might not be available on TextTrack object. Use label/language.
+                   if (track.label === currentSub.label) {
+                       track.mode = 'showing';
+                   } else {
+                       track.mode = 'hidden';
+                   }
                } else {
-                   track.mode = 'hidden';
+                   // HLS Sub active or None active -> Hide "Custom" tracks.
+                   // But wait, if HLS uses native tracks, we shouldn't hide them if HLS enables them.
+                   // HLS.js controls its own tracks.
+                   // Safest: Hide only the tracks we know are custom?
+                   // Or just let HLS manage its tracks and we manage ours.
+                   
+                   // If "Off" (-1), hide everything
+                   if (activeSubtitle === -1) {
+                       track.mode = 'hidden';
+                   }
+                   
+                   // If custom sub not active, we force hide?
+                   // Let's rely on the loop above: we iterated all tracks.
+                   // If currentSub.isHls, we enabled HLS. We should ensure custom tracks are hidden.
+                   // Identifying custom tracks: they have blob URLs usually, but TextTrack obj doesn't show src.
+                   // We can assume if it's HLS managed, HLS will toggle `mode`. 
+                   // We just need to ensure we don't conflict.
+                   
+                   // Since we moved `enableWebVTT: true`, HLS might create native tracks.
+                   // For now, let's just loop and set 'hidden' only if we are sure we want to hide it.
+                   // Actually, with HLS.js, changing subtitleTrack usually updates the mode of the corresponding native track if enableWebVTT is on.
+                   // So we only need to manage non-HLS scenarios explicitly or "Off".
+                   
+                   if (activeSubtitle === -1) {
+                      track.mode = 'hidden';
+                   } else if (currentSub && !currentSub.isHls && track.label === currentSub.label) {
+                      track.mode = 'showing';
+                   } else if (currentSub && !currentSub.isHls) {
+                      track.mode = 'hidden';
+                   }
+                   // If HLS is active, we let HLS do its thing, unless we want to force hide others?
+                   // HLS usually manages its own.
+                   
                }
             }
          }
