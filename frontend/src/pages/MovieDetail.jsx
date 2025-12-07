@@ -119,7 +119,6 @@ const MovieDetail = () => {
       }, 5 * 60 * 1000);
     }
 
-    // Use fetch with keepalive for reliable save on unload
     const handleUnload = () => {
        if (user && !localStorage.getItem('isIncognito') && startTimeRef.current) {
           const duration = Math.round((Date.now() - startTimeRef.current) / 1000);
@@ -140,7 +139,6 @@ const MovieDetail = () => {
             release_date: String(movie?.year || '')
           };
 
-          // Use fetch with keepalive: true to ensure request completes even after unload
           fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/history`, {
             method: 'POST',
             headers: {
@@ -149,7 +147,7 @@ const MovieDetail = () => {
             },
             body: JSON.stringify(data),
             keepalive: true
-          }).catch(err => console.error("Keepalive duplicate save failed (expected)", err));
+          }).catch(err => console.error("Save failed", err));
        }
     };
 
@@ -164,63 +162,45 @@ const MovieDetail = () => {
     };
   }, [showPlayer, saveHistory, user, id, currentEpisode]);
 
+  // Main Fetch Effect
   useEffect(() => {
-const fetchMovieDetail = async () => {
+    const fetchMovieDetail = async () => {
       try {
         const response = await axios.get(`/movies/${id}`);
         let movieData = response.data;
         
-        // Prioritize "opstream" / "vip" servers and filter out "player.phimapi.com"
+        // Data Processing: Fix Domains, Filter Bad Sources, Sort
         if (movieData.episodes && Array.isArray(movieData.episodes)) {
-           // 0. FIX DOMAINS & FORCE EMBED (User report: share link works, HLS fails)
+           // 0. FIX DOMAINS & CLEANUP
            movieData.episodes.forEach(server => {
-              server.server_data.forEach(ep => {
-                  const isOpstream = (ep.link_m3u8 && ep.link_m3u8.includes('opstream')) || 
-                                     (ep.link_embed && ep.link_embed.includes('opstream'));
-                  
-                  if (isOpstream) {
-                      // Fix domain in embed to vip.opstream12.com
-                      if (ep.link_embed) {
-                          ep.link_embed = ep.link_embed.replace(/vip\.opstream\d+\.com/, 'vip.opstream12.com');
-                          // Also ensure we use the 'share' format if it wasn't already? 
-                          // The API usually gives correct path "https://vip.opstream12.com/share/..."
-                      }
+              // Filter out broken PhimAPI links
+              server.server_data = server.server_data.filter(ep => {
+                  const url = ep.link_m3u8 || ep.link_embed || '';
+                  return !url.includes('player.phimapi.com');
+              });
 
-                      // Force use of Iframe (link_embed) by nullifying m3u8
-                      // Opstream HLS often has CORS issues on 3rd party sites
-                      ep.link_m3u8 = null;
+              // Fix Opstream/Ophim links to Force Embed Iframe
+              server.server_data.forEach(ep => {
+                  const embed = ep.link_embed || '';
+                  if (embed.includes('opstream') || embed.includes('ophim') || embed.includes('/share/')) {
+                      // Standardize domain to vip.opstream12.com
+                      ep.link_embed = embed.replace(/https?:\/\/[^/]+\/share\//, 'https://vip.opstream12.com/share/');
+                      ep.link_m3u8 = null; 
                   }
               });
            });
            
-           // 1. Sort servers: Favored domains first (Opstream/VIP)
+           movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
+
+           // 1. Sort servers: Prioritize vip.opstream12.com
            movieData.episodes.sort((a, b) => {
-              const checkEp = (server) => server.server_data.some(ep => {
-                  // Check both HLS and Embed links (since we forced some to Embed)
-                  const url = ep.link_m3u8 || ep.link_embed || '';
-                  return url.includes('opstream') || url.includes('vip');
-              });
+              const checkEp = (server) => server.server_data.some(ep => (ep.link_embed || '').includes('vip.opstream12.com'));
               const aGood = checkEp(a);
               const bGood = checkEp(b);
               if (aGood && !bGood) return -1;
               if (!aGood && bGood) return 1;
               return 0;
            });
-
-           // 2. Deprioritize 'player.phimapi.com' links (move to bottom) instead of removing
-           // This ensures we still have a fallback if the VIP streams fail (404)
-           movieData.episodes.forEach(server => {
-              server.server_data.sort((a, b) => {
-                 const isPhimApiA = a.link_m3u8 && a.link_m3u8.includes('player.phimapi.com');
-                 const isPhimApiB = b.link_m3u8 && b.link_m3u8.includes('player.phimapi.com');
-                 if (isPhimApiA && !isPhimApiB) return 1;
-                 if (!isPhimApiA && isPhimApiB) return -1;
-                 return 0; // Maintain order otherwise
-              });
-           });
-           
-           // Cleanup empty servers (just in case, though now we aren't deleting)
-           movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
         }
 
         setMovie(movieData);
@@ -237,7 +217,7 @@ const fetchMovieDetail = async () => {
           const response = await axios.get(`/watchlist/check/${id}`);
           setInWatchlist(response.data.inWatchlist);
         } catch (error) {
-          console.error("Error checking watchlist:", error);
+          console.error("Watchlist check error:", error);
         }
       }
     };
@@ -246,20 +226,19 @@ const fetchMovieDetail = async () => {
       fetchMovieDetail();
       checkWatchlist();
       
-      // Fetch Top Movies for Sidebar
       const fetchTopMovies = async () => {
         try {
           const response = await axios.get('/movies/top-viewed');
           setTopMovies(response.data);
         } catch (error) {
-          console.error("Error fetching top movies:", error);
+          console.error("Top movies error:", error);
         }
       };
       fetchTopMovies();
     }
   }, [id, language, user]);
 
-  // Fetch related movies when movie data is available
+  // Fetch related movies
   useEffect(() => {
     if (movie && movie.category && movie.category.length > 0) {
       const fetchRelated = async () => {
