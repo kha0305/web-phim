@@ -453,16 +453,28 @@ const MovieDetail = () => {
                 <div key={idx} style={{marginBottom: '1rem'}}>
                   <h4 style={{color: '#aaa', marginBottom: '0.5rem'}}>
                     {(() => {
-                      const name = server.server_name;
+                      const name = server.server_name || '';
+                      
+                      // Prioritize identifying known types
+                      const lowerName = name.toLowerCase();
+                      if (lowerName.includes('lồng tiếng')) {
+                        let label = "Lồng Tiếng";
+                        if (name.includes('Hà Nội')) label += " (Giọng Bắc)";
+                        else if (name.includes('Sài Gòn') || name.includes('HCM')) label += " (Giọng Nam)";
+                        return label;
+                      }
+                      if (lowerName.includes('thuyết minh')) return "Thuyết Minh";
+                      if (lowerName.includes('vietsub')) return t('vietsub');
+
+                      // Fallback cleaning
                       const type = name.match(/\((.*?)\)/)?.[1] || name.replace(/^#\S+\s*/, '').trim();
                       
-                      // Only add accent info for Dub/Voice-over, not Subtitles
-                      if (type.toLowerCase().includes('lồng tiếng') || type.toLowerCase().includes('thuyết minh')) {
-                        if (name.includes('Hà Nội')) return `${type} (Giọng Bắc)`;
-                        if (name.includes('Sài Gòn') || name.includes('HCM')) return `${type} (Giọng Nam)`;
+                      // Filter out potential garbage (filenames, too long strings)
+                      if (type.length > 20 || type.includes('.jpg') || type.includes('.png') || type.includes('http')) {
+                          return t('vietsub');
                       }
                       
-                      return type || 'Vietsub';
+                      return type || t('vietsub');
                     })()}
                   </h4>
                   <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
