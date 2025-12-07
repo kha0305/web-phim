@@ -179,8 +179,29 @@ const MovieDetail = () => {
                   return !url.includes('player.phimapi.com');
               });
 
-              // We no longer force opstream to embed, allowing M3U8 if available
-              // But we can ensure standard https if needed, or leave as is.
+              // Deduplicate episodes: Prioritize vip.opstream / kkphim
+              const epMap = new Map();
+              server.server_data.forEach(ep => {
+                  const name = ep.name;
+                  if (!epMap.has(name)) {
+                      epMap.set(name, ep);
+                  } else {
+                      const current = epMap.get(name);
+                      const currentUrl = (current.link_m3u8 || current.link_embed || '').toLowerCase();
+                      const newUrl = (ep.link_m3u8 || ep.link_embed || '').toLowerCase();
+                      
+                      const getScore = (url) => {
+                          if (url.includes('vip.opstream')) return 3;
+                          if (url.includes('kkphim')) return 2;
+                          return 1;
+                      };
+                      
+                      if (getScore(newUrl) > getScore(currentUrl)) {
+                          epMap.set(name, ep);
+                      }
+                  }
+              });
+              server.server_data = Array.from(epMap.values());
            });
            
            movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
