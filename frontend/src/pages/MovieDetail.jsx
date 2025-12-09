@@ -170,18 +170,26 @@ const MovieDetail = () => {
        const autoplay = searchParams.get('autoplay');
        const episodeSlug = searchParams.get('episode');
 
-       if (autoplay === 'true' && episodeSlug) {
+       if (autoplay === 'true') {
            // Find the episode
            let foundEp = null;
            let foundServer = null;
 
-           for (const server of movie.episodes) {
-               const ep = server.server_data.find(e => e.slug === episodeSlug);
-               if (ep) {
-                   foundEp = ep;
-                   foundServer = server.server_name;
-                   break;
-               }
+           if (episodeSlug && episodeSlug !== 'undefined') {
+              for (const server of movie.episodes) {
+                  const ep = server.server_data.find(e => e.slug === episodeSlug);
+                  if (ep) {
+                      foundEp = ep;
+                      foundServer = server.server_name;
+                      break;
+                  }
+              }
+           }
+           
+           // Fallback to first episode if specific one not found or not provided
+           if (!foundEp && movie.episodes.length > 0 && movie.episodes[0].server_data.length > 0) {
+              foundEp = movie.episodes[0].server_data[0];
+              foundServer = movie.episodes[0].server_name;
            }
 
            if (foundEp && foundServer) {
@@ -328,7 +336,19 @@ const MovieDetail = () => {
   }, [movie]);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    if (showPlayer) {
+      setTimeout(() => {
+        const playerSection = document.getElementById('player-section');
+        if (playerSection) {
+          playerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [showPlayer]);
+
+  useEffect(() => {
+
+  const handleKeyDown = (e) => {
       if (e.key === 'f' || e.key === 'F') {
         if (showPlayer) {
           const playerSection = document.getElementById('player-section');
