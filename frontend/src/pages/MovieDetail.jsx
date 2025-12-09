@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import axios from '../api/axios';
 import MovieCard from '../components/MovieCard';
 import VideoPlayer from '../components/VideoPlayer';
@@ -11,6 +11,7 @@ import Comments from '../components/Comments';
 
 const MovieDetail = () => {
   const { id } = useParams(); // This is now the slug
+  const location = useLocation();
   const [movie, setMovie] = useState(null);
   const [relatedMovies, setRelatedMovies] = useState([]);
   const [topMovies, setTopMovies] = useState([]);
@@ -161,6 +162,39 @@ const MovieDetail = () => {
       }
     };
   }, [showPlayer, saveHistory, user, id, currentEpisode]);
+
+  // Autoplay Logic
+  useEffect(() => {
+    if (!loading && movie && movie.episodes) {
+       const searchParams = new URLSearchParams(location.search);
+       const autoplay = searchParams.get('autoplay');
+       const episodeSlug = searchParams.get('episode');
+
+       if (autoplay === 'true' && episodeSlug) {
+           // Find the episode
+           let foundEp = null;
+           let foundServer = null;
+
+           for (const server of movie.episodes) {
+               const ep = server.server_data.find(e => e.slug === episodeSlug);
+               if (ep) {
+                   foundEp = ep;
+                   foundServer = server.server_name;
+                   break;
+               }
+           }
+
+           if (foundEp && foundServer) {
+               // Only auto-play if we haven't selected one yet (to avoid infinite re-trigger if params stay)
+               // Or better: check if showPlayer is false
+               if (!showPlayer) {
+                   handleWatch(foundEp, foundServer);
+               }
+           }
+       }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, movie, location.search]);
 
   // Main Fetch Effect
   useEffect(() => {

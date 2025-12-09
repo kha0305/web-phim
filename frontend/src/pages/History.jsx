@@ -113,7 +113,7 @@ const History = () => {
                    const progressPercent = item.durationTotal ? (item.progress / item.durationTotal) * 100 : 0;
                    return (
                     <div key={`${item._id || item.id}-${index}`} className="history-item-card">
-                       <Link to={`/movie/${item.slug || item.id}`} className="history-thumb-link">
+                       <Link to={`/movie/${item.slug || item.id}?episode=${item.episodeSlug}&autoplay=true`} className="history-thumb-link">
                          <div className="history-thumb-wrapper">
                             <img 
                               src={item.poster_url || item.thumb_url} 
@@ -135,7 +135,7 @@ const History = () => {
                        
                        <div className="history-info">
                          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                           <Link to={`/movie/${item.slug || item.id}`} className="history-title">
+                           <Link to={`/movie/${item.slug || item.id}?episode=${item.episodeSlug}&autoplay=true`} className="history-title">
                              {item.name}
                            </Link>
                            <button 

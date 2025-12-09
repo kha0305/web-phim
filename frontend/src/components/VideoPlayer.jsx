@@ -45,6 +45,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isHoveringControls, setIsHoveringControls] = useState(false);
   const controlsTimeoutRef = useRef(null);
 
   // Apply volume and speed on mount/update
@@ -196,27 +197,34 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying && !showSubMenu) { // keep controls if menu open
+      // Don't hide if paused, showing submenu, or hovering controls
+      if (isPlaying && !showSubMenu && !isHoveringControls) { 
         setShowControls(false);
       }
-    }, 4000);
+    }, 3000);
+  }, [isPlaying, showSubMenu, isHoveringControls]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isPlaying && !showSubMenu) setShowControls(false);
   }, [isPlaying, showSubMenu]);
 
+  // If hovering controls state changes, we might need to re-evaluate or just let next move handle it.
+  // Actually, if we enter controls, we should clear timeout.
   useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('mousemove', handleMouseMove);
-      container.addEventListener('mouseleave', () => {
-        if (isPlaying && !showSubMenu) setShowControls(false);
-      });
-    }
+     if (isHoveringControls) {
+         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+         setShowControls(true);
+     } else if (isPlaying) {
+         // Re-trigger hide timer if we left controls and are playing
+         handleMouseMove();
+     }
+  }, [isHoveringControls, isPlaying, handleMouseMove]);
+
+  useEffect(() => {
     return () => {
-      if (container) {
-        container.removeEventListener('mousemove', handleMouseMove);
-      }
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, [handleMouseMove, isPlaying, showSubMenu]);
+  }, []);
 
   // ... (Keep existing Play/Progress/Volume functions) ...
   const togglePlay = useCallback(() => {
@@ -344,9 +352,48 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
       switch(e.key) {
-        case 'ArrowRight': e.preventDefault(); if (videoRef.current) { videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); handleMouseMove(); } break;
-        case 'ArrowLeft': e.preventDefault(); if (videoRef.current) { videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); handleMouseMove(); } break;
-        case ' ': e.preventDefault(); togglePlay(); break;
+        case 'ArrowRight': 
+        case 'l':
+        case 'L':
+            e.preventDefault(); 
+            if (videoRef.current) { 
+                videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); 
+                handleMouseMove(); 
+            } 
+            break;
+        case 'ArrowLeft': 
+        case 'j':
+        case 'J':
+            e.preventDefault(); 
+            if (videoRef.current) { 
+                videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); 
+                handleMouseMove(); 
+            } 
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            setVolume(v => {
+                const newVol = Math.min(1, v + 0.1);
+                localStorage.setItem('videoVolume', newVol);
+                return newVol;
+            });
+            handleMouseMove();
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            setVolume(v => {
+                const newVol = Math.max(0, v - 0.1);
+                localStorage.setItem('videoVolume', newVol);
+                return newVol;
+            });
+            handleMouseMove();
+            break;
+        case ' ': 
+        case 'k':
+        case 'K':
+            e.preventDefault(); 
+            togglePlay(); 
+            break;
         case 'f': case 'F': toggleFullscreen(); break;
         case 'm': case 'M': toggleMute(); break;
         default: break;
@@ -363,9 +410,11 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
 
   return (
     <div 
-      className="video-player-container custom-player" 
+      className={`video-player-container custom-player ${!showControls ? 'hide-cursor' : ''}`} 
       ref={containerRef}
       onDoubleClick={toggleFullscreen}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       <video
         ref={videoRef}
@@ -501,8 +550,13 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       )}
 
       {/* Controls */}
-      <div className={`custom-controls ${showControls ? 'visible' : 'hidden'}`}>
-        <div style={{position: 'absolute', right: '20px', bottom: '60px', color: 'rgba(255,255,255,0.5)', fontSize: '10px', pointerEvents: 'none'}}>Space: Play | F: Full | M: Mute</div>
+      <div 
+          className={`custom-controls ${showControls ? 'visible' : 'hidden'}`}
+          onMouseEnter={() => setIsHoveringControls(true)}
+          onMouseLeave={() => setIsHoveringControls(false)}
+          onClick={(e) => e.stopPropagation()} 
+      >
+        <div style={{position: 'absolute', right: '20px', bottom: '60px', color: 'rgba(255,255,255,0.5)', fontSize: '10px', pointerEvents: 'none'}}>Space: Play | F: Full | M: Mute | Arrows: Seek/Vol</div>
 
         <div className="progress-bar-container">
            <div className="buffered-bar" style={{ position: 'absolute', top: '50%', left: 0, height: '4px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.4)', borderRadius: '2px', width: `${(buffered / (duration || 1)) * 100}%` }}></div>
