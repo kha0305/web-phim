@@ -20,7 +20,7 @@ const DynamicRouter = () => {
       {routesConfig.map((route, index) => {
         const Component = Registry[route.component];
         if (!Component) {
-            console.warn(\`Component \${route.component} not found in registry\`);
+            console.warn(`Component ${route.component} not found in registry`);
             return null;
         }
 
