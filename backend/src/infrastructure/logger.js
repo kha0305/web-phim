@@ -12,19 +12,24 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     logFormat
   ),
-  transports: [
-    // Write all logs with importance level of `error` or less to `error.log`
-    new winston.transports.File({ filename: path.join(__dirname, '../../logs/error.log'), level: 'error' }),
-    // Write all logs with importance level of `info` or less to `combined.log`
-    new winston.transports.File({ filename: path.join(__dirname, '../../logs/combined.log') }),
-  ],
+  transports: [],
 });
 
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
+// Configure transports based on environment
 if (process.env.NODE_ENV !== 'production') {
+  // Local Development: Log to files and console
+  logger.add(new winston.transports.File({ filename: path.join(__dirname, '../../logs/error.log'), level: 'error' }));
+  logger.add(new winston.transports.File({ filename: path.join(__dirname, '../../logs/combined.log') }));
   logger.add(new winston.transports.Console({
     format: winston.format.simple(),
+  }));
+} else {
+  // Production (Vercel): Log to Console ONLY (Read-only filesystem)
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      logFormat
+    )
   }));
 }
 
