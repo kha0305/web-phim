@@ -2,7 +2,7 @@
   {
     "path": "/",
     "method": "GET",
-    "handler": "HealthService.check",
+    "handler": "SystemService.check",
     "permissions": ["public"]
   },
   {
