@@ -2703,3 +2703,23 @@ body {
   color: white;
   margin-bottom: 2rem;
 }
+
+/* FIX: Video Player Controls Z-Index in Fullscreen */
+.custom-player:fullscreen .custom-controls {
+  z-index: 2147483647;
+}
+
+.custom-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Ensure cursor interaction works */
+.custom-player.hide-cursor {
+  cursor: none;
+}
+
+/* Controls should always reset cursor */
+.custom-controls {
+  cursor: auto;
+}

@@ -410,10 +410,11 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
 
   return (
     <div 
-      className={`video-player-container custom-player ${!showControls ? 'hide-cursor' : ''}`} 
+      className={`video-player-container custom-player ${!showControls && isPlaying ? 'hide-cursor' : ''}`} 
       ref={containerRef}
       onDoubleClick={toggleFullscreen}
       onMouseMove={handleMouseMove}
+      onPointerMove={handleMouseMove} // Better support for some devices/browsers
       onMouseLeave={handleMouseLeave}
     >
       <video
