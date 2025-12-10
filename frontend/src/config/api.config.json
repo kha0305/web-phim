@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "login": { "method": "POST", "url": "/auth/login" },
+    "register": { "method": "POST", "url": "/auth/register" },
+    "profile": { "method": "PUT", "url": "/user/profile" }
+  },
+  "movie": {
+    "detail": { "method": "GET", "url": "/movies/:slug" },
+    "popular": { "method": "GET", "url": "/movies/popular" },
+    "list": { "method": "GET", "url": "/movies/list/:listSlug" }
+  },
+  "history": {
+    "get": { "method": "GET", "url": "/history/:userId" },
+    "add": { "method": "POST", "url": "/history" },
+    "delete": { "method": "DELETE", "url": "/history/:movieId" }
+  }
+}

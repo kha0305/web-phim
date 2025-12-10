@@ -1,1191 +1,129 @@
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios");
-require("dotenv").config();
-const { User, History, View, Watchlist, Comment, Notification, NotificationRead, sequelize } = require('./models');
-const { Op } = require('sequelize');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
 const compression = require('compression');
-const rateLimit = require('express-rate-limit'); // Optimize: Rate limit
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const multer = require('multer');
+const path = require('path');
+require("dotenv").config();
+
+// Imports
+const { loadConfig } = require('./src/infrastructure/config-loader');
+const GenericController = require('./src/api/controllers/GenericController');
+const { authenticateToken, authenticateAdmin, authenticateOwnerOrAdmin } = require('./src/api/middlewares/authMiddleware');
+const logger = require('./src/infrastructure/logger');
+const AppError = require('./src/shared/AppError');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
-const IPHIM_BASE_URL = "https://iphim.cc/api/films";
-const PHIMAPI_BASE_URL = "https://phimapi.com";
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_this';
 
-// Sync Database
-sequelize.sync({ alter: true }).then(() => {
-  console.log("Database synced");
-}).catch(err => {
-  console.error("Failed to sync database:", err);
-});
+// Security & Performance Middlewares
+app.use(helmet()); // Set security headers
+app.use(compression());
 
-// Rate Limiting: Max 100 requests per 15 minutes
+// Logger
+if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+} else {
+    app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+}
+
+// Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 100,
   standardHeaders: true, 
   legacyHeaders: false,
-  message: "Too many requests from this IP, please try again after 15 minutes"
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  handler: (req, res, next, options) => {
+      next(new AppError(options.message, 429));
+  }
 });
+app.use('/api', limiter); // Apply only to API routes
 
-app.use(compression());
-app.use(limiter); // Apply rate limiting to all requests
-app.use(cors());
+// CORS configuration
+const corsOptions = {
+    origin: process.env.CLIENT_URL || '*', // Restrict in production
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Health Check
-app.get("/", (req, res) => {
-  res.send("Backend is running!");
-});
-
-// Middleware to authenticate JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
-
-// Simple in-memory cache
-const apiCache = new Map();
-const CACHE_TTL = 60 * 60 * 1000; // 60 minutes
-
-// Optimization: Garbage Collection for Cache (Prevents RAM overflow)
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of apiCache.entries()) {
-    if (now - value.timestamp > CACHE_TTL) {
-      apiCache.delete(key);
-    }
-  }
-  // console.log("Cache Cleaned. Current size:", apiCache.size);
-}, 10 * 60 * 1000); // Run every 10 minutes
-
-// Helper function for API requests with caching
-// Helper function for API requests with Stale-While-Revalidate caching
-const fetchFromAPI = async (url) => {
-  const now = Date.now();
-  const cached = apiCache.get(url);
-  
-  if (cached) {
-    const { data, timestamp } = cached;
-    const age = now - timestamp;
-    
-    // If cache is relatively fresh (less than 10 minutes), return immediately without update
-    // If cache is stale (older than 10 minutes), return immediately BUT trigger background update
-    if (age > 10 * 60 * 1000) {
-       // Background update (fire and forget)
-       axios.get(url).then(response => {
-         apiCache.set(url, { data: response.data, timestamp: Date.now() });
-         // console.log(`Background updated: ${url}`);
-       }).catch(err => console.error(`Background update failed for ${url}:`, err.message));
-    }
-    
-    return data;
-  }
-
-  // Cold start: must wait for fetch
-  try {
-    const response = await axios.get(url);
-    apiCache.set(url, { data: response.data, timestamp: now });
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching ${url}:`, error.message);
-    throw error;
-  }
-};
-
-// --- AUTH ROUTES ---
-
-const nodemailer = require('nodemailer');
-
-// Email Transporter Configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // Or use 'smtp.gmail.com' directly
-  auth: {
-    user: process.env.EMAIL_USER, // Your email address
-    pass: process.env.EMAIL_PASS  // Your email password or app-specific password
-  }
-});
-
-// Helper to send welcome email
-const sendWelcomeEmail = async (email, username) => {
-  console.log("Attempting to send welcome email to:", email);
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error("Email credentials missing in .env! EMAIL_USER or EMAIL_PASS is not set.");
-    return;
-  }
-
-  const mailOptions = {
-    from: `"PhimChill Team" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Welcome to PhimChill! 🎉',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #e50914; text-align: center;">Welcome to PhimChill, ${username}!</h2>
-        <p>Thank you for joining our community. We are excited to have you on board.</p>
-        <p>Start exploring thousands of movies and TV shows right now!</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="https://movie.server.id.vn" style="background-color: #e50914; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Start Watching</a>
-        </div>
-        <p style="color: #888; font-size: 12px; text-align: center;">If you did not create this account, please ignore this email.</p>
-      </div>
-    `
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`Welcome email sent: ${info.messageId}`);
-  } catch (error) {
-    console.error("Error sending welcome email:", error);
-  }
-};
-
-app.post("/api/auth/register", async (req, res) => {
-  try {
-    const { username, password, email } = req.body;
-    if (!username || !password || !email) return res.status(400).json({ error: "Missing fields" });
-    
-    const existingUser = await User.findOne({ where: { username } });
-    if (existingUser) {
-      return res.status(400).json({ error: "Username already exists" });
-    }
-
-    const existingEmail = await User.findOne({ where: { email } });
-    if (existingEmail) {
-      return res.status(400).json({ error: "Email already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ username, password: hashedPassword, email });
-
-    // Send Welcome Email asynchronously (don't block response)
-    sendWelcomeEmail(email, username);
-
-    const token = jwt.sign({ id: newUser.id, username: newUser.username, role: newUser.role }, JWT_SECRET);
-
-    res.json({ 
-      user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role, avatar: newUser.avatar },
-      token 
-    });
-  } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ error: "Register failed" });
-  }
-});
-
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ where: { username } });
-
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
-
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
-
-    res.json({ 
-      user: { id: user.id, username: user.username, email: user.email, role: user.role, avatar: user.avatar },
-      token 
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-
-const { Otp } = require('./models');
-
-// Generate Random 6-digit OTP
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// Send OTP Email
-const sendOtpEmail = async (email, otp) => {
-  console.log("Attempting to send OTP email to:", email);
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error("Email credentials missing for OTP!");
-    return;
-  }
-
-  const mailOptions = {
-    from: `"PhimChill Security" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Password Reset OTP',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #e50914; text-align: center;">Password Reset Request</h2>
-        <p>You requested to reset your password. Use the code below to proceed:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <span style="background-color: #f4f4f4; padding: 10px 20px; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 5px;">${otp}</span>
-        </div>
-        <p style="color: #888; font-size: 12px; text-align: center;">This code will expire in 10 minutes.</p>
-      </div>
-    `
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`OTP email sent: ${info.messageId}`);
-  } catch (error) {
-    console.error("Error sending OTP email:", error);
-  }
-};
-
-// 1. Forgot Password - Send OTP
-app.post("/api/auth/forgot-password", async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email is required" });
-
-    const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // Remove existing OTPs for this email
-    await Otp.destroy({ where: { email } });
-
-    // Save new OTP
-    await Otp.create({ email, otp, expiresAt });
-
-    // Send Email
-    await sendOtpEmail(email, otp);
-
-    res.json({ success: true, message: "OTP sent to email" });
-  } catch (error) {
-    console.error("Forgot password error:", error);
-    res.status(500).json({ error: "Failed to send OTP" });
-  }
-});
-
-// 2. Verify OTP
-app.post("/api/auth/verify-otp", async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: "Missing fields" });
-
-    const record = await Otp.findOne({ where: { email, otp } });
-    
-    if (!record) {
-      return res.status(400).json({ error: "Invalid OTP" });
-    }
-
-    if (new Date() > record.expiresAt) {
-      return res.status(400).json({ error: "OTP expired" });
-    }
-
-    res.json({ success: true, message: "OTP verified" });
-  } catch (error) {
-    console.error("Verify OTP error:", error);
-    res.status(500).json({ error: "Verification failed" });
-  }
-});
-
-// 3. Reset Password
-app.post("/api/auth/reset-password", async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
-
-    // Verify OTP again to be safe
-    const record = await Otp.findOne({ where: { email, otp } });
-    if (!record || new Date() > record.expiresAt) {
-      return res.status(400).json({ error: "Invalid or expired OTP" });
-    }
-
-    // Update Password
-    const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    // Delete used OTP
-    await record.destroy();
-
-    res.json({ success: true, message: "Password reset successfully" });
-  } catch (error) {
-    console.error("Reset password error:", error);
-    res.status(500).json({ error: "Failed to reset password" });
-  }
-});
-
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// ...
-
-// Ensure uploads directory exists
-// Ensure uploads directory exists (Only locally)
-const uploadDir = path.join(__dirname, 'uploads');
-if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
-  try {
-    fs.mkdirSync(uploadDir);
-  } catch (err) {
-    console.warn("Could not create uploads directory:", err.message);
-  }
-}
-
-// Configure Multer (Use Memory Storage for Vercel Blob)
+// Upload config
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Vercel Blob
-const { put } = require('@vercel/blob');
+// Dynamic Routes Loading
+const routesConfig = loadConfig('routes.config.json');
 
-// Manual DB Sync Route (for Vercel)
-app.get("/api/sync-db", async (req, res) => {
-  try {
-    await sequelize.sync({ alter: true });
-    res.send("Database synced successfully!");
-  } catch (error) {
-    console.error("Sync error:", error);
-    res.status(500).send("Failed to sync database: " + error.message);
-  }
-});
+if (routesConfig) {
+  routesConfig.forEach(route => {
+    const middlewares = [];
 
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Not needed with Blob
-
-// ...
-
-app.put("/api/user/profile", authenticateToken, upload.single('avatar'), async (req, res) => {
-  try {
-    const { username, gender } = req.body;
-    const userId = req.user.id;
-
-    if (!username) return res.status(400).json({ error: "Username is required" });
-
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    user.username = username;
-    if (gender) user.gender = gender;
-    
-    if (req.file) {
-      // Check for token
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-         console.error("Missing BLOB_READ_WRITE_TOKEN");
-         return res.status(500).json({ error: "Server configuration error: Missing Blob Token" });
-      }
-
-      // Upload to Vercel Blob
-      try {
-        const filename = `${Date.now()}-${req.file.originalname}`;
-        const blob = await put(filename, req.file.buffer, { 
-          access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-        user.avatar = blob.url;
-      } catch (uploadError) {
-        console.error("Vercel Blob upload failed:", uploadError);
-        return res.status(500).json({ error: "Failed to upload image: " + uploadError.message });
-      }
-    } else if (req.body.avatarUrl) {
-       // Allow updating via URL string if provided (fallback)
-       user.avatar = req.body.avatarUrl;
-    }
-    
-    await user.save();
-
-    res.json({ success: true, user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar, gender: user.gender } });
-  } catch (error) {
-    console.error("Update profile error:", error);
-    res.status(500).json({ error: "Failed to update profile" });
-  }
-});
-
-// Change Password Route
-app.post("/api/user/change-password", authenticateToken, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const userId = req.user.id;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: "Missing fields" });
+    // 1. Permission Middleware
+    if (route.permissions) {
+      if (route.permissions.includes('authenticated')) middlewares.push(authenticateToken);
+      if (route.permissions.includes('admin')) middlewares.push(authenticateAdmin);
+      if (route.permissions.includes('owner_or_admin')) middlewares.push(authenticateOwnerOrAdmin);
     }
 
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: "Incorrect current password" });
+    // 2. Upload Middleware
+    if (route.upload) {
+        const [type, field] = route.upload.split(':');
+        if (type === 'single') middlewares.push(upload.single(field));
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
+    // 3. Handler Assignment
+    const method = route.method.toLowerCase();
+    if (app[method]) {
+      // Async Handler Wrapper
+      const asyncHandler = fn => (req, res, next) => {
+          Promise.resolve(fn(req, res, next)).catch(next);
+      };
 
-    res.json({ success: true, message: "Password changed successfully" });
-  } catch (error) {
-    console.error("Change password error:", error);
-    res.status(500).json({ error: "Failed to change password" });
-  }
-});
-
-// Request Email Change - Send OTP to NEW email
-app.post("/api/user/request-email-change", authenticateToken, async (req, res) => {
-  try {
-    const { newEmail } = req.body;
-    if (!newEmail) return res.status(400).json({ error: "New email is required" });
-
-    // Check if email is already taken
-    const existingUser = await User.findOne({ where: { email: newEmail } });
-    if (existingUser) {
-      return res.status(400).json({ error: "Email already in use" });
-    }
-
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // Remove existing OTPs for this email
-    await Otp.destroy({ where: { email: newEmail } });
-
-    // Save new OTP
-    await Otp.create({ email: newEmail, otp, expiresAt });
-
-    // Send OTP Email
-    await sendOtpEmail(newEmail, otp);
-
-    res.json({ success: true, message: "OTP sent to new email" });
-  } catch (error) {
-    console.error("Request email change error:", error);
-    res.status(500).json({ error: "Failed to send OTP" });
-  }
-});
-
-// Verify Email Change - Update Email
-app.post("/api/user/verify-email-change", authenticateToken, async (req, res) => {
-  try {
-    const { newEmail, otp } = req.body;
-    const userId = req.user.id;
-
-    if (!newEmail || !otp) return res.status(400).json({ error: "Missing fields" });
-
-    const record = await Otp.findOne({ where: { email: newEmail, otp } });
-    
-    if (!record) {
-      return res.status(400).json({ error: "Invalid OTP" });
-    }
-
-    if (new Date() > record.expiresAt) {
-      return res.status(400).json({ error: "OTP expired" });
-    }
-
-    // Update User Email
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    user.email = newEmail;
-    await user.save();
-
-    // Delete used OTP
-    await record.destroy();
-
-    res.json({ success: true, message: "Email updated successfully", user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar } });
-  } catch (error) {
-    console.error("Verify email change error:", error);
-    res.status(500).json({ error: "Failed to update email" });
-  }
-});
-
-// --- HISTORY ROUTES ---
-app.get("/api/history/:userId", authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    if (req.user.id != userId) return res.sendStatus(403);
-
-    const history = await History.findAll({ 
-      where: { userId },
-      order: [['watchedAt', 'DESC']]
-    });
-    
-    // Hybrid approach: Use cached DB data if available, otherwise fetch from API (and maybe update cache - optional)
-    const detailedHistory = await Promise.all(history.map(async (item) => {
-      // 1. Fast Path: If we have cached display info, use it.
-      if (item.title) {
-         return {
-            name: item.title,
-            slug: item.movieId, // Using movieId as slug often
-            origin_name: item.title, // fallback
-            poster_url: item.poster_path,
-            thumb_url: item.poster_path, // fallback
-            year: parseInt(item.release_date) || 0,
-            watchedAt: item.watchedAt,
-            durationWatched: item.durationWatched,
-            progress: item.progress,
-            durationTotal: item.durationTotal,
-            lastEpisodeSlug: item.lastEpisodeSlug,
-            lastEpisodeName: item.lastEpisodeName
-         };
-      }
-
-      // 2. Slow Path: Legacy data (fetch from API)
-      try {
-        const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${item.movieId}`);
-        if (data.status && data.movie) {
-             // Optional: Update DB with fetched info to speed up next time? 
-             // Ideally yes, but let's keep it simple for now or do a lazy update.
-             // Let's do a fire-and-forget update to self-repair the cache.
-             History.update({
-                title: data.movie.name,
-                poster_path: data.movie.poster_url,
-                backdrop_path: data.movie.thumb_url,
-                release_date: String(data.movie.year)
-             }, { where: { id: item.id } }).catch(err => console.error("Lazy cache update failed", err));
-
-             return { 
-              ...data.movie, 
-              watchedAt: item.watchedAt, 
-              durationWatched: item.durationWatched,
-              progress: item.progress,
-              durationTotal: item.durationTotal,
-              lastEpisodeSlug: item.lastEpisodeSlug,
-              lastEpisodeName: item.lastEpisodeName
-            };
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
-    }));
-
-    res.json(detailedHistory.filter(Boolean));
-  } catch (error) {
-    console.error("History fetch error:", error);
-    res.status(500).json({ error: "Failed to fetch history" });
-  }
-});
-
-app.post("/api/history", authenticateToken, async (req, res) => {
-  try {
-    const { 
-      userId, movieId, duration, progress, durationTotal, 
-      episodeSlug, episodeName,
-      title, poster_path, backdrop_path, release_date
-    } = req.body;
-
-    if (!userId || !movieId) return res.status(400).json({ error: "Missing data" });
-
-    if (req.user.id != userId) return res.sendStatus(403);
-
-    const existingEntry = await History.findOne({ where: { userId, movieId } });
-    
-    if (existingEntry) {
-      existingEntry.watchedAt = new Date();
-      existingEntry.durationWatched = (existingEntry.durationWatched || 0) + (duration || 0);
-      
-      if (progress !== undefined) existingEntry.progress = progress;
-      if (durationTotal !== undefined) existingEntry.durationTotal = durationTotal;
-      if (episodeSlug) existingEntry.lastEpisodeSlug = episodeSlug;
-      if (episodeName) existingEntry.lastEpisodeName = episodeName;
-      
-      // Update cache fields if provided
-      if (title) existingEntry.title = title;
-      if (poster_path) existingEntry.poster_path = poster_path;
-      if (backdrop_path) existingEntry.backdrop_path = backdrop_path;
-      if (release_date) existingEntry.release_date = release_date;
-      
-      await existingEntry.save();
-    } else {
-      await History.create({
-        userId,
-        movieId,
-        durationWatched: duration || 0,
-        progress: progress || 0,
-        durationTotal: durationTotal || 0,
-        lastEpisodeSlug: episodeSlug,
-        lastEpisodeName: episodeName,
-        title,
-        poster_path, // Note: ensure frontend sends these
-        backdrop_path,
-        release_date,
-        watchedAt: new Date()
+      app[method](route.path, ...middlewares, (req, res, next) => {
+          GenericController.handle(req, res, route.handler).catch(next);
       });
-    }
-
-    const [view, created] = await View.findOrCreate({
-      where: { movieId },
-      defaults: { count: 0 }
-    });
-    
-    await view.increment('count');
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Save history error:", error);
-    res.status(500).json({ error: "Failed to save history" });
-  }
-});
-
-app.get("/api/history/progress/:movieId", authenticateToken, async (req, res) => {
-  try {
-    const { movieId } = req.params;
-    const userId = req.user.id;
-
-    const entry = await History.findOne({ where: { userId, movieId } });
-    if (entry) {
-      res.json({ 
-        progress: entry.progress,
-        lastEpisodeSlug: entry.lastEpisodeSlug,
-        lastEpisodeName: entry.lastEpisodeName
-      });
-    } else {
-      res.json({ progress: 0, lastEpisodeSlug: null });
-    }
-  } catch (error) {
-    console.error("Get progress error:", error);
-    res.status(500).json({ error: "Failed to get progress" });
-  }
-});
-
-// Delete specific history item
-app.delete("/api/history/:movieId", authenticateToken, async (req, res) => {
-  try {
-    const { movieId } = req.params;
-    const userId = req.user.id;
-    
-    await History.destroy({ where: { userId, movieId } });
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Delete history error:", error);
-    res.status(500).json({ error: "Failed to delete history item" });
-  }
-});
-
-// Clear all history for user
-app.delete("/api/history", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    await History.destroy({ where: { userId } });
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Clear history error:", error);
-    res.status(500).json({ error: "Failed to clear history" });
-  }
-});
-
-// --- WATCHLIST ROUTES ---
-app.get("/api/watchlist/:userId", authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    if (req.user.id != userId) return res.sendStatus(403);
-    
-    const watchlist = await Watchlist.findAll({
-      where: { userId },
-      order: [['addedAt', 'DESC']]
-    });
-
-    const detailedWatchlist = await Promise.all(watchlist.map(async (item) => {
-      try {
-        const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${item.movieId}`);
-        if (data.status && data.movie) {
-            return { ...data.movie, addedAt: item.addedAt };
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
-    }));
-
-    res.json(detailedWatchlist.filter(Boolean));
-  } catch (error) {
-    console.error("Watchlist fetch error:", error);
-    res.status(500).json({ error: "Failed to fetch watchlist" });
-  }
-});
-
-app.get("/api/watchlist/check/:movieId", authenticateToken, async (req, res) => {
-  try {
-    const { movieId } = req.params;
-    const userId = req.user.id;
-
-    const entry = await Watchlist.findOne({ where: { userId, movieId } });
-    res.json({ inWatchlist: !!entry });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to check watchlist" });
-  }
-});
-
-app.post("/api/watchlist", authenticateToken, async (req, res) => {
-  try {
-    const { movieId } = req.body;
-    const userId = req.user.id;
-
-    await Watchlist.findOrCreate({
-      where: { userId, movieId }
-    });
-
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to add to watchlist" });
-  }
-});
-
-app.delete("/api/watchlist/:movieId", authenticateToken, async (req, res) => {
-  try {
-    const { movieId } = req.params;
-    const userId = req.user.id;
-
-    await Watchlist.destroy({
-      where: { userId, movieId }
-    });
-
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to remove from watchlist" });
-  }
-});
-
-// --- COMMENT ROUTES ---
-
-app.get("/api/comments/:movieId", async (req, res) => {
-  try {
-    const { movieId } = req.params;
-    const comments = await Comment.findAll({
-      where: { movieId },
-      include: [{
-        model: User,
-        attributes: ['username', 'avatar']
-      }],
-      order: [['createdAt', 'DESC']]
-    });
-    res.json(comments);
-  } catch (error) {
-    console.error("Fetch comments error:", error);
-    res.status(500).json({ error: "Failed to fetch comments" });
-  }
-});
-
-app.post("/api/comments", authenticateToken, async (req, res) => {
-  try {
-    const { movieId, content } = req.body;
-    const userId = req.user.id;
-    
-    if (!content || !content.trim()) return res.status(400).json({ error: "Content is required" });
-
-    const newComment = await Comment.create({
-      userId,
-      movieId,
-      content: content.trim()
-    });
-
-    const commentWithUser = await Comment.findOne({
-      where: { id: newComment.id },
-      include: [{
-        model: User,
-        attributes: ['username', 'avatar']
-      }]
-    });
-
-    res.json(commentWithUser);
-  } catch (error) {
-    console.error("Post comment error:", error);
-    res.status(500).json({ error: "Failed to post comment" });
-  }
-});
-
-// --- ADMIN MIDDLEWARE ---
-const authenticateAdmin = (req, res, next) => {
-  authenticateToken(req, res, () => {
-    if (req.user && req.user.role === 'admin') {
-      next();
-    } else {
-      res.sendStatus(403);
+      logger.info(`[Route] ${route.method} ${route.path} -> ${route.handler}`);
     }
   });
-};
+}
 
-// --- ADMIN ROUTES ---
-app.get("/api/admin/stats", authenticateAdmin, async (req, res) => {
-  try {
-    const userCount = await User.count();
-    const commentCount = await Comment.count();
-    const viewCount = await View.sum('count') || 0;
-    
-    // Top 5 Most Viewed (already have logic for this, reuse or simplified)
-    const topViews = await View.findAll({
-      order: [['count', 'DESC']],
-      limit: 5
-    });
+// 404 Handler
+app.all('*', (req, res, next) => {
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
 
-    res.json({
-       userCount,
-       commentCount,
-       viewCount,
-       topViews
-    });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch stats" });
+// Global Error Handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const status = err.status || 'error';
+
+  if (statusCode === 500) {
+      logger.error(`[ERROR] ${err.stack}`); // Log critical errors
   }
+
+  res.status(statusCode).json({
+    status: status,
+    message: err.message || 'Something went wrong!',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
-app.post("/api/admin/notify", authenticateAdmin, async (req, res) => {
-  try {
-    const { title, message, userId } = req.body; // userId null = all
-    await Notification.create({
-      userId: userId || null,
-      title,
-      message,
-      type: 'system'
-    });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to send notification" });
-  }
-});
-
-app.delete("/api/admin/comments/:id", authenticateAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await Comment.destroy({ where: { id } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete comment" });
-  }
-});
-
-// --- NOTIFICATION ROUTES ---
-app.get("/api/notifications", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    // 1. Get all relevant notifications (Personal + System)
-    const notifications = await Notification.findAll({
-      where: { 
-        [Op.or]: [
-          { userId },
-          { userId: null }
-        ] 
-      },
-      order: [['createdAt', 'DESC']],
-      limit: 50
-    });
-
-    // 2. Get read status for system notifications
-    let readIds = new Set();
-    try {
-      const readRecords = await NotificationRead.findAll({
-        where: { userId },
-        attributes: ['notificationId']
-      });
-      readIds = new Set(readRecords.map(r => r.notificationId));
-    } catch (dbError) {
-      console.warn("NotificationRead table might be missing or error:", dbError.message);
-      // Treat as empty set, don't crash
-    }
-
-    // 3. Merge data
-    const result = notifications.map(n => {
-      // If it's a personal notification, use the isRead column
-      // If it's a system notification (userId is null), check if it's in readIds
-      const isRead = n.userId ? n.isRead : readIds.has(n.id);
-      return {
-        ...n.toJSON(),
-        isRead
-      };
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch notifications" });
-  }
-});
-
-app.put("/api/notifications/read-all", authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        
-        // 1. Mark all personal notifications as read
-        await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
-
-        // 2. Find all unread system notifications and mark them as read
-        const systemNotifs = await Notification.findAll({ where: { userId: null } });
-        
-        // We could optimize this, but loop is fine for now
-        for (const n of systemNotifs) {
-            await NotificationRead.findOrCreate({
-                where: { userId, notificationId: n.id }
-            });
-        }
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to mark all as read" });
-    }
-});
-
-app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    
-    const notification = await Notification.findOne({ where: { id } });
-    
-    if (!notification) return res.status(404).json({ error: "Notification not found" });
-
-    if (notification.userId === userId) {
-        // Personal notification -> update column
-        notification.isRead = true;
-        await notification.save();
-    } else if (notification.userId === null) {
-        // System notification -> add to NotificationRead table
-        await NotificationRead.findOrCreate({
-            where: { userId, notificationId: id }
-        });
-    }
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to update notification" });
-  }
-});
-
-// --- MOVIE ROUTES (IPHIM & PHIMAPI) ---
-
-// Get Genres
-app.get("/api/genres", async (req, res) => {
-  try {
-    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/the-loai`);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch genres" });
-  }
-});
-
-// Get Countries
-app.get("/api/countries", async (req, res) => {
-  try {
-    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/quoc-gia`);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch countries" });
-  }
-});
-
-// Get Movies by Genre (Use IPHIM as primary because PHIMAPI is giving 404s)
-app.get("/api/movies/genre/:slug", async (req, res) => {
-  try {
-    const page = req.query.page || 1;
-    const { slug } = req.params;
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/the-loai/${slug}?page=${page}`);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch movies by genre" });
-  }
-});
-
-// Get Movies by Country
-app.get("/api/movies/country/:slug", async (req, res) => {
-  try {
-    const page = req.query.page || 1;
-    const { slug } = req.params;
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/quoc-gia/${slug}?page=${page}`);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch movies by country" });
-  }
-});
-
-// Get Movies by Year (approximation if API supports, otherwise return empty or use search)
-app.get("/api/movies/year/:year", async (req, res) => {
-  try {
-    const page = req.query.page || 1;
-    const { year } = req.params;
-    // PhimAPI might support /nam-phat-hanh/2024
-    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/nam-phat-hanh/${year}?page=${page}`);
-    res.json(data);
-  } catch (error) {
-    // Fallback if not supported
-    res.json({ title: `Movies in ${req.params.year}`, items: [] });
-  }
-});
-
-// Specific caches for heavy endpoints
-let popularCache = { data: null, timestamp: 0 };
-let topViewedCache = { data: null, timestamp: 0 };
-const ENDPOINT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-
-// Get Popular Movies (Phim mới cập nhật)
-app.get("/api/movies/popular", async (req, res) => {
-  try {
-    const page = req.query.page || 1;
-    // Only cache first page
-    if (page == 1 && popularCache.data && (Date.now() - popularCache.timestamp < ENDPOINT_CACHE_TTL)) {
-       return res.json(popularCache.data);
-    }
-
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/phim-moi-cap-nhat?page=${page}`);
-    
-    if (page == 1) {
-      popularCache = { data, timestamp: Date.now() };
-    }
-    
-    res.json(data);
-  } catch (error) {
-    console.error("Popular movies error:", error);
-    res.status(500).json({ error: "Failed to fetch popular movies" });
-  }
-});
-
-// Get Top Viewed (From local DB + PhimAPI details)
-app.get("/api/movies/top-viewed", async (req, res) => {
-  try {
-    if (topViewedCache.data && (Date.now() - topViewedCache.timestamp < ENDPOINT_CACHE_TTL)) {
-      return res.json(topViewedCache.data);
-    }
-
-    const topViews = await View.findAll({
-      order: [['count', 'DESC']],
-      limit: 10
-    });
-    
-    let movies = await Promise.all(topViews.map(async (v) => {
-      try {
-        const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${v.movieId}`);
-        if (data.status && data.movie) {
-            return { ...data.movie, viewCount: v.count };
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
-    }));
-
-    const result = movies.filter(Boolean);
-    topViewedCache = { data: result, timestamp: Date.now() };
-    
-    res.json(result);
-  } catch (error) {
-    console.error("Top movies error:", error);
-    res.status(500).json({ error: "Failed to fetch top movies" });
-  }
-});
-
-
-
-// Get Movies by List (Phim Le, Phim Bo, etc.)
-app.get("/api/movies/list/:listSlug", async (req, res) => {
-  try {
-    const { listSlug } = req.params;
-    const page = req.query.page || 1;
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/danh-sach/${listSlug}?page=${page}`);
-    res.json(data);
-  } catch (error) {
-    console.error("List fetch error:", error);
-    res.status(500).json({ error: "Failed to fetch movies by list" });
-  }
-});
-
-// Search Movies
-app.get("/api/movies/search", async (req, res) => {
-  try {
-    const query = req.query.query;
-    if (!query) {
-      return res.status(400).json({ error: "Query parameter is required" });
-    }
-    const data = await fetchFromAPI(`${IPHIM_BASE_URL}/search?keyword=${query}`);
-    res.json(data);
-  } catch (error) {
-    console.error("Search error:", error);
-    res.status(500).json({ error: "Failed to search movies" });
-  }
-});
-
-// Get Movie Details
-app.get("/api/movies/:slug", async (req, res) => {
-  const { slug } = req.params;
-  try {
-    let data;
-    
-    // Try primary source (IPHIM - Requested by user)
-    try {
-      data = await fetchFromAPI(`${IPHIM_BASE_URL}/phim/${slug}`);
-    } catch (e) {
-      console.warn(`Primary API (IPHIM) failed for ${slug}, trying fallback...`);
-    }
-
-    // Fallback to PhimAPI
-    if (!data || !data.status) {
-      try {
-        data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${slug}`);
-      } catch (e) {
-        console.warn(`Fallback API (PhimAPI) failed for ${slug}`);
-      }
-    }
-
-    // Fallback to OPhim if others fail
-    if (!data || !data.status) {
-      try {
-        data = await fetchFromAPI(`https://ophim1.com/phim/${slug}`);
-      } catch (e) {
-        console.warn(`Fallback API (OPhim) failed for ${slug}`);
-      }
-    }
-
-    // If still no data, try checking if it's a "slug" mismatch issue by searching again? 
-    // No, that's too complex. Just return 404.
-    
-    if (!data || !data.status) {
-        console.error(`Movie not found: ${slug}`);
-        return res.status(404).json({ error: "Movie not found" });
-    }
-
-    // Merge episodes into the movie object so frontend works as expected
-    const movieData = { ...data.movie, episodes: data.episodes };
-    res.json(movieData);
-  } catch (error) {
-    console.error(`Error in movie detail route for ${slug}:`, error.message);
-    res.status(500).json({ error: "Failed to fetch movie details" });
-  }
-});
-
+// Start Server
 if (require.main === module) {
-  const cluster = require('cluster');
-  const os = require('os');
-
-  // Multi-core Clustering Optimization
-  const numCPUs = os.cpus().length;
-
-  if (cluster.isMaster) {
-    console.log(`Master process ${process.pid} is running`);
-    console.log(`Detected ${numCPUs} CPU cores. Forking workers...`);
-
-    // Fork workers
-    for (let i = 0; i < numCPUs; i++) {
-      cluster.fork();
-    }
-
-    // Respawn worker if it dies
-    cluster.on('exit', (worker, code, signal) => {
-      console.log(`Worker ${worker.process.pid} died. Respawning...`);
-      cluster.fork();
+    const { sequelize } = require('./src/infrastructure/database');
+    sequelize.sync({ alter: true }).then(() => {
+        logger.info("Database synced");
+        app.listen(PORT, () => {
+            logger.info(`Server is running on port ${PORT}`);
+        });
+    }).catch(err => {
+        logger.error(`Failed to sync database: ${err.message}`);
     });
-  } else {
-    // Workers share the TCP connection
-    app.listen(PORT, () => {
-      console.log(`Worker ${process.pid} started and listening on port ${PORT}`);
-    });
-  }
 }
 
 module.exports = app;

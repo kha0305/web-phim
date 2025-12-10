@@ -2444,3 +2444,235 @@ body {
   color: white; /* White text */
   padding: 5px;
 }
+
+/* =========================================
+   MOBILE RESPONSIVE OVERHAUL (Native App Look)
+   ========================================= */
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 13px; /* Slightly smaller base font */
+  }
+
+  /* 1. Navbar Optimization */
+  .navbar {
+    padding: 0.5rem 0;
+    transition: all 0.3s ease;
+  }
+  
+  .navbar .container {
+    padding: 0 1rem;
+  }
+
+  .nav-links, 
+  .user-greeting,
+  .language-btn {
+    display: none !important; /* Hide desktop nav items, use BottomNav instead */
+  }
+
+  .logo {
+    font-size: 1.5rem;
+  }
+
+  .search-container {
+    width: auto;
+    margin: 0;
+    position: static;
+    flex-grow: 1;
+    margin-left: 1rem;
+  }
+
+  .search-input {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* 2. Hero Section - Compact */
+  .hero {
+    height: 65vh; /* Reduce height */
+    min-height: 400px;
+    margin-bottom: 2rem;
+  }
+
+  .hero-content {
+    grid-template-columns: 1fr; /* Stack layout */
+    text-align: center;
+    padding-top: 4rem;
+    gap: 1rem;
+    justify-content: flex-end; /* Push content to bottom */
+    padding-bottom: 2rem;
+    height: 100%;
+    align-content: end;
+  }
+
+  .hero-poster-wrapper { 
+      display: none; /* Hide side poster on mobile */
+  }
+
+  .hero-text {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .hero-meta {
+    justify-content: center;
+    font-size: 0.9rem;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-overview {
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Show only 2 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    padding: 0 1rem;
+  }
+
+  .hero-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .hero-btn {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    width: 45%;
+    justify-content: center;
+  }
+
+  /* 3. Movie Grid - 3 Columns (Netflix Style) */
+  .movies-grid,
+  .results-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important; /* Force 3 columns */
+    gap: 8px !important; /* Tighter gap */
+    padding: 0 8px;
+  }
+
+  /* Adjust section titles */
+  .section-header {
+    padding: 0 12px;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+  }
+
+  /* Compact Movie Card */
+  .movie-card {
+    background: transparent;
+    box-shadow: none;
+  }
+  
+  .movie-card:hover {
+    transform: none; /* Disable hover scale on touch */
+  }
+
+  .movie-poster {
+    border-radius: 4px; /* Smaller radius */
+    aspect-ratio: 2/3;
+  }
+
+  .movie-info {
+    padding: 6px 2px;
+    background: transparent;
+  }
+
+  .movie-title {
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .movie-meta {
+    font-size: 0.75rem;
+  }
+  
+  .movie-meta span:not(:first-child) {
+      display: none; /* Hide extra meta info, keep only year/primary info */
+  }
+
+  /* 4. Movie Detail Page Mobile */
+  .movie-detail-container {
+      padding-top: 0;
+  }
+  
+  .detail-hero {
+      height: 50vh;
+  }
+  
+  .movie-content-wrapper {
+      margin-top: -50px; /* Pull up */
+      padding: 0 1rem;
+  }
+  
+  .detail-poster {
+      display: none; /* Hide large poster in detail view to save space */
+  }
+  
+  .detail-info {
+      width: 100%;
+  }
+  
+  .detail-title {
+      font-size: 2rem;
+      text-align: center;
+  }
+  
+  .detail-actions {
+      justify-content: center;
+  }
+  
+  /* 5. Video Player Container */
+  .video-container {
+      margin: 0 -1rem; /* Full width breakout */
+      border-radius: 0;
+  }
+
+  /* 6. Genre List (Horizontal Scroll) */
+  .genre-container {
+      padding: 0.5rem 12px 1.5rem;
+  }
+  
+  .genre-pill {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+  }
+
+  /* 7. Bottom Padding for Nav */
+  body {
+      padding-bottom: 70px; /* Space for BottomNav */
+  }
+
+  /* Hide Scroll To Top on Mobile (Gets in the way) */
+  .scroll-to-top {
+      bottom: 80px;
+      right: 15px;
+      width: 40px;
+      height: 40px;
+      opacity: 0.8;
+  }
+}
+
+/* Extra Small Screens (iPhone SE etc) */
+@media (max-width: 380px) {
+    .movies-grid {
+        grid-template-columns: repeat(2, 1fr) !important; /* 2 columns for very small screens */
+    }
+}

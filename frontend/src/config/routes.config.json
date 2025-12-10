@@ -1,0 +1,56 @@
+[
+  {
+    "path": "/",
+    "component": "Home",
+    "exact": true
+  },
+  {
+    "path": "/movie/:id",
+    "component": "MovieDetail"
+  },
+  {
+    "path": "/login",
+    "component": "Login"
+  },
+  {
+    "path": "/register",
+    "component": "Register"
+  },
+  {
+    "path": "/forgot-password",
+    "component": "ForgotPassword"
+  },
+  {
+    "path": "/history",
+    "component": "History",
+    "protected": true
+  },
+  {
+    "path": "/watchlist",
+    "component": "Watchlist",
+    "protected": true
+  },
+  {
+    "path": "/profile",
+    "component": "Profile",
+    "protected": true
+  },
+  {
+    "path": "/catalog",
+    "component": "Catalog"
+  },
+  {
+    "path": "/admin",
+    "component": "AdminDashboard",
+    "protected": true,
+    "role": "admin"
+  },
+  {
+    "path": "/schedule",
+    "component": "Schedule"
+  },
+  {
+    "path": "*",
+    "component": "NotFound"
+  }
+]

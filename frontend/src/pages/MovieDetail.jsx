@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getMovieYear } from '../utils/movieUtils';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import Comments from '../components/Comments';
+// Comments component removed
 
 const MovieDetail = () => {
   const { id } = useParams(); // This is now the slug
@@ -717,8 +717,7 @@ const MovieDetail = () => {
               </div>
             )}
             
-            {/* Comments Section */}
-            <Comments movieId={movie._id || movie.id} />
+            {/* Comments removed */}
           </div>
 
           <div className="sidebar">

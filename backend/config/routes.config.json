@@ -1,0 +1,237 @@
+[
+  {
+    "path": "/",
+    "method": "GET",
+    "handler": "HealthService.check",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/auth/register",
+    "method": "POST",
+    "handler": "AuthService.register",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/auth/login",
+    "method": "POST",
+    "handler": "AuthService.login",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/auth/forgot-password",
+    "method": "POST",
+    "handler": "AuthService.forgotPassword",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/auth/verify-otp",
+    "method": "POST",
+    "handler": "AuthService.verifyOtp",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/auth/reset-password",
+    "method": "POST",
+    "handler": "AuthService.resetPassword",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/user/profile",
+    "method": "PUT",
+    "handler": "UserService.updateProfile",
+    "permissions": ["authenticated"],
+    "upload": "single:avatar"
+  },
+  {
+    "path": "/api/user/change-password",
+    "method": "POST",
+    "handler": "UserService.changePassword",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/user/request-email-change",
+    "method": "POST",
+    "handler": "UserService.requestEmailChange",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/user/verify-email-change",
+    "method": "POST",
+    "handler": "UserService.verifyEmailChange",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/history/:userId",
+    "method": "GET",
+    "handler": "HistoryService.getHistory",
+    "permissions": ["owner_or_admin"]
+  },
+  {
+    "path": "/api/history",
+    "method": "POST",
+    "handler": "HistoryService.saveHistory",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/history/progress/:movieId",
+    "method": "GET",
+    "handler": "HistoryService.getProgress",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/history/:movieId",
+    "method": "DELETE",
+    "handler": "HistoryService.deleteItem",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/history",
+    "method": "DELETE",
+    "handler": "HistoryService.clearHistory",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/watchlist/:userId",
+    "method": "GET",
+    "handler": "WatchlistService.getWatchlist",
+    "permissions": ["owner_or_admin"]
+  },
+  {
+    "path": "/api/watchlist/check/:movieId",
+    "method": "GET",
+    "handler": "WatchlistService.checkWatchlist",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/watchlist",
+    "method": "POST",
+    "handler": "WatchlistService.addToWatchlist",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/watchlist/:movieId",
+    "method": "DELETE",
+    "handler": "WatchlistService.removeFromWatchlist",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/comments/:movieId",
+    "method": "GET",
+    "handler": "CommentService.getComments",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/comments",
+    "method": "POST",
+    "handler": "CommentService.addComment",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/admin/stats",
+    "method": "GET",
+    "handler": "AdminService.getStats",
+    "permissions": ["admin"]
+  },
+  {
+    "path": "/api/admin/notify",
+    "method": "POST",
+    "handler": "AdminService.sendNotification",
+    "permissions": ["admin"]
+  },
+  {
+    "path": "/api/admin/comments/:id",
+    "method": "DELETE",
+    "handler": "AdminService.deleteComment",
+    "permissions": ["admin"]
+  },
+  {
+    "path": "/api/notifications",
+    "method": "GET",
+    "handler": "NotificationService.getNotifications",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/notifications/read-all",
+    "method": "PUT",
+    "handler": "NotificationService.markAllAsRead",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/notifications/:id/read",
+    "method": "PUT",
+    "handler": "NotificationService.markAsRead",
+    "permissions": ["authenticated"]
+  },
+  {
+    "path": "/api/genres",
+    "method": "GET",
+    "handler": "MovieService.getGenres",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/countries",
+    "method": "GET",
+    "handler": "MovieService.getCountries",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/genre/:slug",
+    "method": "GET",
+    "handler": "MovieService.getMoviesByGenre",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/country/:slug",
+    "method": "GET",
+    "handler": "MovieService.getMoviesByCountry",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/year/:year",
+    "method": "GET",
+    "handler": "MovieService.getMoviesByYear",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/popular",
+    "method": "GET",
+    "handler": "MovieService.getPopular",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/top-viewed",
+    "method": "GET",
+    "handler": "MovieService.getTopViewed",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/list/:listSlug",
+    "method": "GET",
+    "handler": "MovieService.getMoviesByList",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/search",
+    "method": "GET",
+    "handler": "MovieService.searchMovies",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/recommend",
+    "method": "POST",
+    "handler": "MovieService.getRecommendations",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/movies/:slug",
+    "method": "GET",
+    "handler": "MovieService.getDetail",
+    "permissions": ["public"]
+  },
+  {
+    "path": "/api/sync-db",
+    "method": "GET",
+    "handler": "SystemService.syncDb",
+    "permissions": ["public"]
+  }
+]
