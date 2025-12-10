@@ -217,8 +217,9 @@ const MovieDetail = () => {
            // Replace with user provided link
            if (movieData.name.toLowerCase().includes('gia đình điệp viên') || movieData.slug.includes('spy-x-family')) {
                movieData.episodes.forEach(server => {
+                   if (!server || !server.server_data) return;
                    server.server_data.forEach(ep => {
-                       if (ep.name === '10' || ep.slug.endsWith('tap-10')) {
+                       if (ep && (ep.name === '10' || (ep.slug && ep.slug.endsWith('tap-10')))) {
                            ep.link_m3u8 = 'https://vip.opstream12.com/20251207/30579_918b71f2/index.m3u8';
                        }
                    });
@@ -226,8 +227,11 @@ const MovieDetail = () => {
            }
            // 0. FIX DOMAINS & CLEANUP
            movieData.episodes.forEach(server => {
+              if (!server || !server.server_data) return;
+
               // Filter out broken PhimAPI links
               server.server_data = server.server_data.filter(ep => {
+                  if (!ep) return false;
                   const url = ep.link_m3u8 || ep.link_embed || '';
                   return !url.includes('player.phimapi.com');
               });
@@ -235,6 +239,7 @@ const MovieDetail = () => {
               // Deduplicate episodes: Prioritize vip.opstream / kkphim
               const epMap = new Map();
               server.server_data.forEach(ep => {
+                  if (!ep || !ep.name) return;
                   const name = ep.name;
                   if (!epMap.has(name)) {
                       epMap.set(name, ep);
@@ -244,6 +249,7 @@ const MovieDetail = () => {
                       const newUrl = (ep.link_m3u8 || ep.link_embed || '').toLowerCase();
                       
                       const getScore = (url) => {
+                          if (!url) return 0;
                           if (url.includes('vip.opstream')) return 3;
                           if (url.includes('kkphim')) return 2;
                           return 1;
@@ -257,16 +263,19 @@ const MovieDetail = () => {
               server.server_data = Array.from(epMap.values());
            });
            
-           movieData.episodes = movieData.episodes.filter(s => s.server_data.length > 0);
+           movieData.episodes = movieData.episodes.filter(s => s && s.server_data && s.server_data.length > 0);
 
            // 1. Sort servers: Prioritize Vietsub #1 / Opstream / KKPhim with M3U8
            movieData.episodes.sort((a, b) => {
+              if (!a) return 1; 
+              if (!b) return -1;
+               
               // Helper to check quality/priority of a server
               const getScore = (server) => {
                   const name = (server.server_name || '').toLowerCase();
                   const data = server.server_data || [];
-                  const hasM3u8 = data.some(ep => ep.link_m3u8 && (ep.link_m3u8.includes('opstream') || ep.link_m3u8.includes('kkphim')));
-                  const hasVip = data.some(ep => (ep.link_embed||'').includes('vip.opstream') || (ep.link_m3u8||'').includes('vip.opstream'));
+                  const hasM3u8 = data.some(ep => ep && ep.link_m3u8 && (ep.link_m3u8.includes('opstream') || ep.link_m3u8.includes('kkphim')));
+                  const hasVip = data.some(ep => ep && ((ep.link_embed||'').includes('vip.opstream') || (ep.link_m3u8||'').includes('vip.opstream')));
                   
                   let score = 0;
                   if (hasM3u8) score += 10;
