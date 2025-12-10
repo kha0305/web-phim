@@ -149,7 +149,7 @@ const Home = () => {
                         </div>
                     </div>
                  </div>
-            ) : featuredMovie && (
+            ) : featuredMovie ? (
                 <header 
                   className="hero" 
                   style={{
@@ -203,6 +203,15 @@ const Home = () => {
                     </div>
                   </div>
                 </header>
+            ) : (
+                // Fallback Banner to preserve layout
+                 <div className="hero hero-placeholder" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh'}}>
+                    <div className="container" style={{textAlign: 'center', zIndex: 2}}>
+                        <h1 className="hero-title" style={{fontSize: '3rem', marginBottom: '1rem'}}>PhimChill</h1>
+                        <p style={{fontSize: '1.2rem', color: '#ccc'}}>Khám phá thế giới phim ảnh bất tận</p>
+                    </div>
+                    <div className="hero-overlay-gradient"></div>
+                 </div>
             )}
          </div>
       )}
