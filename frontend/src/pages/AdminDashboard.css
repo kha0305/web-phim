@@ -1,4 +1,4 @@
-/* Vercel Dashboard Theme */
+/* Vercel Dashboard Theme - Brand Adapted */
 
 /* Normalize & Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -7,31 +7,35 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #000;
+  background: var(--background-color); /* #141414 */
   color: #fff;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   letter-spacing: -0.01em;
 }
 
 .admin-container-inner {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
   width: 100%;
 }
 
 /* Header & Nav */
 .admin-header-nav {
-  background: #000;
-  border-bottom: 1px solid #333;
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
+  padding: 0.5rem 0;
   margin-bottom: 0.5rem;
 }
 
@@ -41,57 +45,46 @@
   gap: 12px;
 }
 
-.brand-logo {
-  width: 32px;
-  height: 32px;
-  background: #fff; /* Vercel Triangle is usually SVG, keep white square/icon for now */
-  color: #000;
-  border-radius: 50%; /* Or triangle clip-path */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 14px;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-
 .brand-name {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   color: #888;
   font-weight: 500;
 }
 
 .text-white {
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .user-section .avatar-circle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: linear-gradient(to bottom right, #333, #111);
-  border: 1px solid #333;
+  background: var(--primary-color);
+  border: 2px solid rgba(255,255,255,0.1);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0.8rem;
-  color: #ccc;
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: bold;
 }
 
 .header-tabs {
   display: flex;
-  gap: 24px;
-  margin-top: 0.5rem;
+  gap: 30px;
+  margin-top: 1rem;
 }
 
 .tab-item {
-  font-size: 0.9rem;
-  color: #888;
+  font-size: 0.95rem;
+  color: #aaa;
   text-decoration: none;
-  padding-bottom: 12px;
+  padding-bottom: 15px;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  cursor: pointer;
+  font-weight: 500;
 }
 
 .tab-item:hover {
@@ -99,8 +92,8 @@
 }
 
 .tab-item.active {
-  color: #fff;
-  border-bottom-color: #fff;
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 /* Main Content */
@@ -112,38 +105,39 @@
 /* Stats Styling */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: transparent;
-  padding-top: 5px;
+  background: var(--surface-color); /* #181818 */
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.1);
 }
 
 .stat-info h3 {
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: #888;
   text-transform: uppercase;
   margin: 0;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #fff;
   margin: 0.5rem 0;
   line-height: 1;
-  letter-spacing: -0.02em;
 }
 
 .stat-sub {
@@ -151,31 +145,39 @@
   color: #666;
 }
 
-.text-success { color: #fff; font-weight: 600; } /* Vercel uses white for positive emphasis usually, or minimal colors */
-.text-neutral { color: #666; }
+.text-success { color: #4caf50; font-weight: 600; }
+.text-neutral { color: #888; }
 
 /* Dashboard Layout */
 .dashboard-content-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1.2fr;
   gap: 2rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-content-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dashboard-card {
-  border: 1px solid #333;
-  border-radius: 8px;
-  background: #0a0a0a; /* Subtle card bg */
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  background: var(--surface-color);
   overflow: hidden;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .card-header {
-  padding: 1.2rem;
-  border-bottom: 1px solid #333;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #0a0a0a;
+  background: rgba(255,255,255,0.02);
 }
 
 .card-header.no-border {
@@ -184,79 +186,92 @@
 
 .card-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #fff;
 }
 
-/* Notification Form (Clean Inputs) */
+/* Notification Form */
 .notification-form {
   padding: 1.5rem;
 }
 
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
 .form-group label {
   display: block;
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 0.9rem;
+  color: #aaa;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
 
 .form-input {
   width: 100%;
-  background: #000;
-  border: 1px solid #333;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
   color: #fff;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
   font-family: inherit;
-  font-size: 0.9rem;
-  transition: border-color 0.15s ease;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #fff; /* High contrast focus */
+  border-color: var(--primary-color);
+  background: rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .btn-text {
-  background: #fff;
-  color: #000;
+  background: var(--primary-color);
+  color: #fff;
   font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 5px;
-  border: 1px solid #fff;
-  font-size: 0.85rem;
+  padding: 10px 24px;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
 }
 
 .btn-text:hover {
-  background: transparent;
-  color: #fff;
+  background: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-text:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Top Trending List */
+/* Top Trending List & Tables */
 .top-views-list {
-  background: #0a0a0a;
+  background: transparent;
 }
 
 .top-view-item {
   display: flex;
   align-items: center;
-  padding: 1rem 1.2rem;
-  border-bottom: 1px solid #222;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.2s;
+}
+
+.top-view-item:hover {
+    background: rgba(255,255,255,0.02);
 }
 
 .top-view-item:last-child {
@@ -264,11 +279,15 @@
 }
 
 .rank-badge {
-  color: #666;
-  font-size: 0.85rem;
-  width: 25px;
-  font-family: monospace;
+  color: #aaa;
+  font-size: 1rem;
+  width: 30px;
+  font-weight: bold;
 }
+
+.top-view-item:nth-child(1) .rank-badge { color: #ffd700; }
+.top-view-item:nth-child(2) .rank-badge { color: #c0c0c0; }
+.top-view-item:nth-child(3) .rank-badge { color: #cd7f32; }
 
 .movie-info {
   flex: 1;
@@ -277,42 +296,104 @@
 
 .movie-id {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  max-width: 200px;
+  margin-bottom: 4px;
 }
 
 .progress-bg {
   width: 100%;
-  height: 4px;
-  background: #222;
-  margin-top: 6px;
-  border-radius: 2px;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .progress-fill {
-  background: #fff; /* Monochrome progress */
+  background: var(--primary-color);
   height: 100%;
-  border-radius: 2px;
+  border-radius: 10px;
 }
 
 .views-badge {
-  color: #666;
-  font-size: 0.85rem;
-  font-family: monospace;
+  color: #ccc;
+  font-size: 0.9rem;
 }
 
 .btn-link {
   background: transparent;
   border: none;
-  color: #666;
-  font-size: 0.85rem;
+  color: var(--primary-color);
+  font-size: 0.9rem;
   cursor: pointer;
+  font-weight: 500;
 }
 
 .btn-link:hover {
-  color: #fff;
+  text-decoration: underline;
+}
+
+/* Tables (Movies/Users) */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    color: #888;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.admin-table td {
+    padding: 1rem 1.5rem;
+    color: #e5e5e5;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.95rem;
+}
+
+.admin-table tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-active { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+.status-banned { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
+
+.action-btn {
+    padding: 6px 12px;
+    margin-right: 5px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.action-btn:hover { background: rgba(255,255,255,0.2); }
+.action-btn.delete { color: #ff4b55; }
+.action-btn.delete:hover { background: rgba(255, 75, 85, 0.15); }
+
+/* Chart Tooltip overrides */
+.custom-tooltip {
+    background: rgba(20,20,20,0.95) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
