@@ -12,17 +12,19 @@ import { LanguageProvider } from './context/LanguageContext';
 import DynamicRouter from './shared/components/DynamicRouter';
 
 function App() {
+  const isAdminRoute = window.location.pathname.startsWith('/admin');
+
   return (
     <LanguageProvider>
       <AuthProvider>
         <Router>
           <ScrollToTop />
-          <Navbar />
-          <div className="app-content">
+          {!isAdminRoute && <Navbar />}
+          <div className={isAdminRoute ? '' : "app-content"}>
              <DynamicRouter />
           </div>
-          <Footer />
-          <BottomNav />
+          {!isAdminRoute && <Footer />}
+          {!isAdminRoute && <BottomNav />}
           <Analytics />
         </Router>
       </AuthProvider>

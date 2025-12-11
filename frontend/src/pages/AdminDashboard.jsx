@@ -59,12 +59,12 @@ const AdminDashboard = () => {
     <div className="admin-container">
       {/* Sidebar */}
       <div className="admin-sidebar">
-        <div className="sidebar-logo">🎬 AdminPanel</div>
+        <div className="sidebar-logo">ADMIN PANEL</div>
         <ul className="sidebar-menu">
-          <li className="active">📊 Dashboard</li>
-          <li onClick={() => alert('Feature coming soon!')}>🎥 Movies</li>
-          <li onClick={() => alert('Feature coming soon!')}>👥 Users</li>
-          <li onClick={() => alert('Feature coming soon!')}>⚙️ Settings</li>
+          <li className="active">Dashboard</li>
+          <li onClick={() => alert('Coming soon')}>Movies Manager</li>
+          <li onClick={() => alert('Coming soon')}>Users Manager</li>
+          <li onClick={() => alert('Coming soon')}>System Settings</li>
         </ul>
       </div>
 
@@ -81,27 +81,30 @@ const AdminDashboard = () => {
         {/* Stats Grid */}
         <div className="stats-grid">
           <div className="stat-card">
-              <div className="stat-icon users-icon">👥</div>
               <div className="stat-info">
-                <h3>Total Users</h3>
+                <h3>Total Registered Users</h3>
                 <p className="stat-value">{stats?.userCount}</p>
-                <span className="stat-trend positive">↑ 12% this week</span>
+                <div className="stat-sub">
+                    <span className="text-success">+12%</span> vs last week
+                </div>
               </div>
           </div>
           <div className="stat-card">
-              <div className="stat-icon comments-icon">💬</div>
                <div className="stat-info">
-                <h3>Comments</h3>
+                <h3>Total Comments</h3>
                 <p className="stat-value">{stats?.commentCount}</p>
-                 <span className="stat-trend neutral">• Stable</span>
+                 <div className="stat-sub">
+                    <span className="text-neutral">Stable</span>
+                </div>
               </div>
           </div>
           <div className="stat-card">
-              <div className="stat-icon views-icon">👁️</div>
                <div className="stat-info">
-                <h3>Total Views</h3>
+                <h3>Total Page Views</h3>
                 <p className="stat-value">{stats?.viewCount}</p>
-                 <span className="stat-trend positive">↑ 5% today</span>
+                 <div className="stat-sub">
+                    <span className="text-success">+5%</span> vs yesterday
+                 </div>
               </div>
           </div>
         </div>
@@ -110,8 +113,8 @@ const AdminDashboard = () => {
             {/* Left Column: Notifications & Quick Actions */}
             <div className="content-left">
                 <div className="dashboard-card notification-card">
-                    <div className="card-header">
-                        <h3>📢 Broadcast Notification</h3>
+                    <div className="card-header no-border">
+                        <h3>SYSTEM BROADCAST</h3>
                     </div>
                     {feedback && (
                         <div className={`feedback-msg ${feedback.includes('success') ? 'success' : 'error'}`}>
@@ -141,9 +144,11 @@ const AdminDashboard = () => {
                                 rows="3"
                             />
                         </div>
-                        <button className="btn btn-primary send-btn" disabled={sending}>
-                            {sending ? 'Sending...' : '🚀 Send'}
-                        </button>
+                        <div className="form-actions">
+                             <button className="btn-text" disabled={sending}>
+                                {sending ? 'SENDING...' : 'SEND NOTIFICATION'}
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -153,8 +158,8 @@ const AdminDashboard = () => {
                 {stats?.topViews && stats.topViews.length > 0 && (
                 <div className="dashboard-card top-views-card">
                     <div className="card-header">
-                        <h3>🔥 Top Trending Movies</h3>
-                        <button className="btn-sm">View All</button>
+                        <h3>TOP TRENDING MOVIES</h3>
+                        <button className="btn-link">View Report</button>
                     </div>
                     <div className="top-views-list">
                         {stats.topViews.map((view, index) => (
