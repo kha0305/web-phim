@@ -4,11 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
 
+
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Mock Data for Charts
+  const chartData = [
+    { name: 'Mon', views: 4000, users: 2400 },
+    { name: 'Tue', views: 3000, users: 1398 },
+    { name: 'Wed', views: 2000, users: 9800 },
+    { name: 'Thu', views: 2780, users: 3908 },
+    { name: 'Fri', views: 1890, users: 4800 },
+    { name: 'Sat', views: 2390, users: 3800 },
+    { name: 'Sun', views: 3490, users: 4300 },
+  ];
   
   // Notification Form
   const [notifTitle, setNotifTitle] = useState('');
@@ -53,6 +67,18 @@ const AdminDashboard = () => {
     }
   };
 
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip" style={{ backgroundColor: '#000', border: '1px solid #333', padding: '10px' }}>
+          <p className="label" style={{ color: '#888', marginBottom: '5px' }}>{`${label}`}</p>
+          <p className="intro" style={{ color: '#fff', margin: 0 }}>{`Views: ${payload[0].value}`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
 
   return (
@@ -82,8 +108,6 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <div className="admin-main">
         <div className="admin-container-inner">
-        {/* Removed redundant topbar */}
-
         {/* Stats Grid */}
         <div className="stats-grid">
           <div className="stat-card">
@@ -114,9 +138,33 @@ const AdminDashboard = () => {
               </div>
           </div>
         </div>
+        
+        {/* Analytics Chart Section */}
+        <div className="dashboard-card chart-card">
+            <div className="card-header no-border">
+                <h3>Traffic Overview (Last 7 Days)</h3>
+            </div>
+            <div style={{ width: '100%', height: 300, padding: '0 20px 20px 0' }}>
+                <ResponsiveContainer>
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#fff" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#fff" stopOpacity={0}/>
+                    </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" stroke="#444" tick={{fill: '#666'}} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#444" tick={{fill: '#666'}} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="views" stroke="#fff" strokeWidth={2} fillOpacity={1} fill="url(#colorViews)" />
+                </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
 
         <div className="dashboard-content-layout">
-            {/* Left Column: Notifications & Quick Actions */}
+            {/* Left Column: Notifications */}
             <div className="content-left">
                 <div className="dashboard-card notification-card">
                     <div className="card-header no-border">
@@ -183,8 +231,8 @@ const AdminDashboard = () => {
                 )}
             </div>
         </div>
+       </div>
       </div>
-        </div>
     </div>
   );
 };
