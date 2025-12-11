@@ -88,7 +88,6 @@ const AdminDashboard = () => {
         <div className="admin-container-inner">
            <div className="header-top">
               <div className="brand-section">
-                 <div className="brand-logo">▲</div>
                  <div className="brand-name">baokha / <span className="text-white">WebPhim Project</span></div>
               </div>
               <div className="user-section">
