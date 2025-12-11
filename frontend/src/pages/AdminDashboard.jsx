@@ -58,25 +58,31 @@ const AdminDashboard = () => {
   return (
     <div className="admin-container">
       {/* Sidebar */}
-      <div className="admin-sidebar">
-        <div className="sidebar-logo">ADMIN PANEL</div>
-        <ul className="sidebar-menu">
-          <li className="active">Dashboard</li>
-          <li onClick={() => alert('Coming soon')}>Movies Manager</li>
-          <li onClick={() => alert('Coming soon')}>Users Manager</li>
-          <li onClick={() => alert('Coming soon')}>System Settings</li>
-        </ul>
+      <div className="admin-header-nav">
+        <div className="admin-container-inner">
+           <div className="header-top">
+              <div className="brand-section">
+                 <div className="brand-logo">▲</div>
+                 <div className="brand-name">baokha / <span className="text-white">WebPhim Project</span></div>
+              </div>
+              <div className="user-section">
+                  <div className="avatar-circle">{user?.username?.charAt(0).toUpperCase()}</div>
+              </div>
+           </div>
+           
+           <div className="header-tabs">
+              <a href="#" className="tab-item active">Overview</a>
+              <a href="#" className="tab-item" onClick={() => alert('Coming soon')}>Movies</a>
+              <a href="#" className="tab-item" onClick={() => alert('Coming soon')}>Users</a>
+              <a href="#" className="tab-item" onClick={() => alert('Coming soon')}>Settings</a>
+           </div>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="admin-main">
-        <div className="admin-topbar">
-          <h2>Overview</h2>
-          <div className="admin-profile">
-             <span>Hello, <b>{user?.username}</b></span>
-             <div className="avatar-circle">{user?.username?.charAt(0).toUpperCase()}</div>
-          </div>
-        </div>
+        <div className="admin-container-inner">
+        {/* Removed redundant topbar */}
 
         {/* Stats Grid */}
         <div className="stats-grid">
@@ -181,5 +187,4 @@ const AdminDashboard = () => {
     </div>
   );
 };
-
 export default AdminDashboard;

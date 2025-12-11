@@ -1,166 +1,181 @@
-/* Base Layout */
+/* Vercel Dashboard Theme */
+
+/* Normalize & Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 .admin-container {
   display: flex;
-  min-height: 100vh;
-  /* Removed margin-top since Navbar is hidden */
-  background: #000;
-  color: #e0e0e0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-}
-
-/* Sidebar */
-.admin-sidebar {
-  width: 260px;
-  background: #050505; /* Deep black/gray */
-  border-right: 1px solid #1a1a1a;
-  display: flex;
   flex-direction: column;
-  position: fixed;
-  height: 100vh;
-  z-index: 100;
-}
-
-.sidebar-logo {
-  padding: 1.5rem 2rem;
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  border-bottom: 1px solid #1a1a1a;
-}
-
-.sidebar-menu {
-  list-style: none;
-  padding: 1rem 0;
-  margin: 0;
-}
-
-.sidebar-menu li {
-  padding: 12px 2rem;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.sidebar-menu li:hover {
-  background: #111;
-  color: #fff;
-}
-
-.sidebar-menu li.active {
-  background: #111;
-  color: #fff;
-  border-right: 2px solid var(--primary-color);
-}
-
-/* Main Area */
-.admin-main {
-  flex: 1;
-  margin-left: 260px;
-  padding: 2rem 3rem;
+  min-height: 100vh;
   background: #000;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
-/* Topbar */
-.admin-topbar {
+.admin-container-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  width: 100%;
+}
+
+/* Header & Nav */
+.admin-header-nav {
+  background: #000;
+  border-bottom: 1px solid #333;
+  padding-top: 1rem;
+}
+
+.header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 3rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #1a1a1a;
+  padding: 1rem 0;
+  margin-bottom: 0.5rem;
 }
 
-.admin-topbar h2 {
-  font-size: 1.5rem;
-  font-weight: 300;
-  margin: 0;
-  color: #fff;
-}
-
-.admin-profile {
+.brand-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.9rem;
-  color: #888;
+  gap: 12px;
 }
 
-.avatar-circle {
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  background: #fff; /* Vercel Triangle is usually SVG, keep white square/icon for now */
+  color: #000;
+  border-radius: 50%; /* Or triangle clip-path */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 14px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.brand-name {
+  font-size: 0.95rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.text-white {
+  color: #fff;
+  font-weight: 600;
+}
+
+.user-section .avatar-circle {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #222;
-  color: #fff;
+  background: linear-gradient(to bottom right, #333, #111);
+  border: 1px solid #333;
   display: flex;
-  align-items: center;
   justify-content: center;
-  font-weight: bold;
+  align-items: center;
   font-size: 0.8rem;
+  color: #ccc;
 }
 
-/* Stats Cards */
+.header-tabs {
+  display: flex;
+  gap: 24px;
+  margin-top: 0.5rem;
+}
+
+.tab-item {
+  font-size: 0.9rem;
+  color: #888;
+  text-decoration: none;
+  padding-bottom: 12px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
+  color: #fff;
+}
+
+.tab-item.active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+/* Main Content */
+.admin-main {
+  padding: 2rem 0;
+  flex: 1;
+}
+
+/* Stats Styling */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
   margin-bottom: 3rem;
 }
 
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .stat-card {
-  background: #0a0a0a;
-  padding: 1.5rem;
-  border: 1px solid #1a1a1a;
-  border-radius: 0; /* Square edges for enterprise look */
+  background: transparent;
+  padding-top: 5px;
 }
 
 .stat-info h3 {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: #666;
-  margin: 0 0 10px 0;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  margin: 0;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 2.5rem;
-  font-weight: 300;
-  margin: 0;
+  font-size: 3rem;
+  font-weight: 700;
   color: #fff;
+  margin: 0.5rem 0;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .stat-sub {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: #444;
+  font-size: 0.9rem;
+  color: #666;
 }
 
-.text-success { color: #4caf50; }
-.text-neutral { color: #888; }
+.text-success { color: #fff; font-weight: 600; } /* Vercel uses white for positive emphasis usually, or minimal colors */
+.text-neutral { color: #666; }
 
-/* Dashboard Content */
+/* Dashboard Layout */
 .dashboard-content-layout {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 3rem;
+  gap: 2rem;
 }
 
 .dashboard-card {
-  background: transparent;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #0a0a0a; /* Subtle card bg */
+  overflow: hidden;
   margin-bottom: 2rem;
 }
 
 .card-header {
+  padding: 1.2rem;
+  border-bottom: 1px solid #333;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #1a1a1a;
+  background: #0a0a0a;
 }
 
 .card-header.no-border {
@@ -169,113 +184,135 @@
 
 .card-header h3 {
   margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Notification Form (Clean Inputs) */
+.notification-form {
+  padding: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
   color: #666;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
-.btn-link {
-  background: transparent;
-  border: none;
-  color: var(--primary-color);
-  font-size: 0.8rem;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Forms */
 .form-input {
   width: 100%;
-  padding: 15px;
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
-  border-radius: 0;
-  color: white;
-  margin-bottom: 1rem;
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
   font-family: inherit;
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s ease;
 }
 
 .form-input:focus {
-  border-color: #333;
   outline: none;
+  border-color: #fff; /* High contrast focus */
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .btn-text {
   background: #fff;
   color: #000;
-  border: none;
-  padding: 10px 20px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 5px;
+  border: 1px solid #fff;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 .btn-text:hover {
-  background: #ccc;
+  background: transparent;
+  color: #fff;
 }
 
-/* Top Views List */
+.btn-text:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Top Trending List */
 .top-views-list {
-  display: flex;
-  flex-direction: column;
+  background: #0a0a0a;
 }
 
 .top-view-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 12px 0;
-  border-bottom: 1px solid #111;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid #222;
+}
+
+.top-view-item:last-child {
+  border-bottom: none;
 }
 
 .rank-badge {
-  width: 20px;
-  font-size: 0.9rem;
-  color: #444;
-  font-weight: bold;
-  text-align: center;
+  color: #666;
+  font-size: 0.85rem;
+  width: 25px;
+  font-family: monospace;
 }
 
 .movie-info {
   flex: 1;
+  padding: 0 1rem;
 }
 
 .movie-id {
   display: block;
-  font-size: 0.85rem;
-  color: #ccc;
+  font-size: 0.9rem;
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
+  max-width: 180px;
 }
 
 .progress-bg {
   width: 100%;
-  height: 2px;
-  background: #111;
-  margin-top: 5px;
+  height: 4px;
+  background: #222;
+  margin-top: 6px;
+  border-radius: 2px;
 }
 
 .progress-fill {
+  background: #fff; /* Monochrome progress */
   height: 100%;
-  background: #333;
+  border-radius: 2px;
 }
 
 .views-badge {
-  font-size: 0.8rem;
   color: #666;
+  font-size: 0.85rem;
   font-family: monospace;
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  color: #fff;
 }
