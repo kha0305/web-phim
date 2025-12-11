@@ -139,6 +139,18 @@
     "permissions": ["admin"]
   },
   {
+    "path": "/api/admin/users",
+    "method": "GET",
+    "handler": "AdminService.getUsers",
+    "permissions": ["admin"]
+  },
+  {
+    "path": "/api/admin/movies",
+    "method": "GET",
+    "handler": "AdminService.getMovies",
+    "permissions": ["admin"]
+  },
+  {
     "path": "/api/admin/comments/:id",
     "method": "DELETE",
     "handler": "AdminService.deleteComment",

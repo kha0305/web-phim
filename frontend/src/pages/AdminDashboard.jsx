@@ -13,16 +13,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Mock Data for Charts
-  const chartData = [
-    { name: 'Mon', views: 4000, users: 2400 },
-    { name: 'Tue', views: 3000, users: 1398 },
-    { name: 'Wed', views: 2000, users: 9800 },
-    { name: 'Thu', views: 2780, users: 3908 },
-    { name: 'Fri', views: 1890, users: 4800 },
-    { name: 'Sat', views: 2390, users: 3800 },
-    { name: 'Sun', views: 3490, users: 4300 },
-  ];
+  // Mock Data Removed
   
   // Notification Form
   const [notifTitle, setNotifTitle] = useState('');
@@ -32,38 +23,46 @@ const AdminDashboard = () => {
 
 
   const [activeTab, setActiveTab] = useState('overview');
-
-  // Mock Data
-  const movies = [
-      { id: '1', title: 'The Matrix Access', views: 4500, quality: '4K', status: 'Active' },
-      { id: '2', title: 'Inception Dream', views: 3200, quality: 'HD', status: 'Active' },
-      { id: '3', title: 'Interstellar Space', views: 8900, quality: '4K', status: 'Featured' },
-      { id: '4', title: 'Dark Knight Rises', views: 1200, quality: 'FHD', status: 'Hidden' },
-  ];
-
-  const users = [
-      { id: '1', name: 'Nguyen Van A', email: 'vana@gmail.com', role: 'User', status: 'Active' },
-      { id: '2', name: 'Tran Thi B', email: 'thib@gmail.com', role: 'VIP', status: 'Active' },
-      { id: '3', name: 'Le Van C', email: 'vanc@gmail.com', role: 'User', status: 'Banned' },
-  ];
+  const [movies, setMovies] = useState([]);
+  const [usersList, setUsersList] = useState([]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/');
     }
     fetchStats();
-  }, [user, navigate]);
+    if (activeTab === 'movies') fetchMovies();
+    if (activeTab === 'users') fetchUsers();
+  }, [user, navigate, activeTab]);
 
   const fetchStats = async () => {
     try {
       const response = await axios.get('/admin/stats');
       setStats(response.data);
-    } catch (error) {
-      console.error("Failed to fetch admin stats", error);
+    } catch {
+      // console.error("Failed to fetch admin stats");
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchMovies = async () => {
+      try {
+          const res = await axios.get('/admin/movies');
+          setMovies(res.data);
+      } catch (err) {
+          console.error("Failed to fetch movies", err);
+      }
+  }
+
+  const fetchUsers = async () => {
+      try {
+          const res = await axios.get('/admin/users');
+          setUsersList(res.data);
+      } catch (err) {
+          console.error("Failed to fetch users", err);
+      }
+  }
 
   const handleSendNotification = async (e) => {
     e.preventDefault();
@@ -104,34 +103,27 @@ const AdminDashboard = () => {
               return (
                   <div className="dashboard-card">
                       <div className="card-header">
-                          <h3>Movies Management</h3>
-                          <button className="btn-text" style={{padding: '6px 12px', fontSize: '0.8rem'}}>+ Add Movie</button>
+                          <h3>Movies Management (Top Viewed)</h3>
                       </div>
                       <table className="admin-table">
                           <thead>
                               <tr>
-                                  <th>ID</th>
-                                  <th>Title</th>
-                                  <th>Quality</th>
+                                  <th>Movie ID</th>
                                   <th>Views</th>
-                                  <th>Status</th>
                                   <th>Actions</th>
                               </tr>
                           </thead>
                           <tbody>
                               {movies.map(movie => (
                                   <tr key={movie.id}>
-                                      <td>#{movie.id}</td>
-                                      <td style={{fontWeight: '500', color: '#fff'}}>{movie.title}</td>
-                                      <td><span className="quality-badge" style={{fontSize: '0.75rem'}}>{movie.quality}</span></td>
-                                      <td>{movie.views.toLocaleString()}</td>
-                                      <td><span className={`status-badge ${movie.status === 'Active' || movie.status === 'Featured' ? 'status-active' : 'status-banned'}`}>{movie.status}</span></td>
+                                      <td style={{fontWeight: '500', color: '#fff'}}>{movie.movieId}</td>
+                                      <td>{movie.count?.toLocaleString()}</td>
                                       <td>
-                                          <button className="action-btn">Edit</button>
-                                          <button className="action-btn delete">Delete</button>
+                                          <button className="action-btn">View</button>
                                       </td>
                                   </tr>
                               ))}
+                              {movies.length === 0 && <tr><td colSpan="3" style={{textAlign:'center'}}>No data available</td></tr>}
                           </tbody>
                       </table>
                   </div>
@@ -145,25 +137,30 @@ const AdminDashboard = () => {
                       <table className="admin-table">
                           <thead>
                               <tr>
-                                  <th>ID</th>
                                   <th>User</th>
                                   <th>Email</th>
                                   <th>Role</th>
-                                  <th>Status</th>
+                                  <th>Joined</th>
                                   <th>Actions</th>
                               </tr>
                           </thead>
                           <tbody>
-                              {users.map(u => (
+                              {usersList.map(u => (
                                   <tr key={u.id}>
-                                      <td>#{u.id}</td>
-                                      <td style={{fontWeight: '500', color: '#fff'}}>{u.name}</td>
+                                      <td style={{fontWeight: '500', color: '#fff'}}>
+                                          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                              {u.avatar ? 
+                                                <img src={u.avatar} alt="avt" style={{width:'24px', height:'24px', borderRadius:'50%', objectFit:'cover'}} /> 
+                                                : <div className="avatar-circle" style={{width:'24px', height:'24px', fontSize:'0.7rem'}}>{u.username?.charAt(0).toUpperCase()}</div>
+                                              }
+                                              {u.username}
+                                          </div>
+                                      </td>
                                       <td>{u.email}</td>
                                       <td>{u.role}</td>
-                                      <td><span className={`status-badge ${u.status === 'Active' ? 'status-active' : 'status-banned'}`}>{u.status}</span></td>
+                                      <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                                       <td>
-                                          <button className="action-btn">View</button>
-                                          <button className="action-btn delete">{u.status === 'Banned' ? 'Unban' : 'Ban'}</button>
+                                          <button className="action-btn delete">Ban</button>
                                       </td>
                                   </tr>
                               ))}
@@ -236,7 +233,7 @@ const AdminDashboard = () => {
                     </div>
                     <div style={{ width: '100%', height: 300, padding: '0 20px 20px 0' }}>
                         <ResponsiveContainer>
-                        <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                        <AreaChart data={stats?.chartData || []} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                             <defs>
                             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#e50914" stopOpacity={0.3}/>
@@ -336,7 +333,10 @@ const AdminDashboard = () => {
                  <div className="brand-name">baokha / <span className="text-white">WebPhim Project</span></div>
               </div>
               <div className="user-section">
-                  <div className="avatar-circle">{user?.username?.charAt(0).toUpperCase()}</div>
+                  {user?.avatar ? 
+                    <img src={user.avatar} alt="admin" style={{width:'32px', height:'32px', borderRadius:'50%', objectFit:'cover', border: '1px solid #333'}} /> 
+                    : <div className="avatar-circle">{user?.username?.charAt(0).toUpperCase()}</div>
+                  }
               </div>
            </div>
            
