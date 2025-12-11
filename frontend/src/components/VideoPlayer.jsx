@@ -24,6 +24,9 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [error, setError] = useState(null);
+  const [showAutoNext, setShowAutoNext] = useState(false);
+  const [autoNextTimer, setAutoNextTimer] = useState(5);
   
   // Custom Subtitles State
   const [subtitles, setSubtitles] = useState([]); // Array of { label, src, lang }
@@ -46,7 +49,9 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isHoveringControls, setIsHoveringControls] = useState(false);
+  const [seekOverlay, setSeekOverlay] = useState(null); // 'forward' | 'rewind'
   const controlsTimeoutRef = useRef(null);
+  const clickTimeoutRef = useRef(null);
 
   // Apply volume and speed on mount/update
   useEffect(() => {
@@ -134,21 +139,77 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         }
 
         setQualityLevels(levels);
-        hlsRef.current = hls; // Ensure ref is set before using in logic below? No, ref update is async safe but here immediate.
+        hlsRef.current = hls; 
+
+        // Auto-select Quality from Persistence
+        const savedQuality = localStorage.getItem('preferredQuality'); // e.g., "1080" (height) or "-1" (auto)
+        if (savedQuality) {
+            const parsedQ = parseInt(savedQuality);
+            if (parsedQ === -1) {
+                hls.currentLevel = -1;
+                setCurrentQuality(-1);
+            } else {
+                // Find level with closest height
+                const levelIndex = levels.findIndex(l => l.height === parsedQ);
+                if (levelIndex !== -1) {
+                    hls.currentLevel = levelIndex;
+                    setCurrentQuality(levelIndex);
+                } else {
+                     // Fallback to highest if specific not found? Or Auto. Let's do Auto.
+                     hls.currentLevel = -1;
+                     setCurrentQuality(-1);
+                }
+            }
+        }
         
         // Update Subtitles State
         setSubtitles(hlsSubs);
+        setError(null);
+        setShowAutoNext(false);
 
-        // Auto-select Vietnamese or First sub
-        if (hlsSubs.length > 0) {
-            const viIndex = hlsSubs.findIndex(s => s.lang === 'vi' || (s.label && s.label.toLowerCase().includes('viet')));
-            const initialSub = viIndex !== -1 ? viIndex : 0;
-            setActiveSubtitle(initialSub);
+        // Auto-select based on Persistence or Vietnamese default
+        const savedLang = localStorage.getItem('preferredSubtitleLang');
+        let initialSub = -1;
+        let activate = false;
+
+        if (savedLang === 'off') {
+            initialSub = -1;
+            activate = false;
+        } else if (savedLang) {
+             const foundIndex = hlsSubs.findIndex(s => s.lang === savedLang || s.label === savedLang);
+             if (foundIndex !== -1) {
+                 initialSub = foundIndex;
+                 activate = true;
+             } else {
+                 // Fallback to Vietnamese if saved not found
+                 const viIndex = hlsSubs.findIndex(s => s.lang === 'vi' || (s.label && s.label.toLowerCase().includes('viet')));
+                 if (viIndex !== -1) {
+                     initialSub = viIndex;
+                     activate = true;
+                 } else if (hlsSubs.length > 0) {
+                     initialSub = 0;
+                     activate = true;
+                 }
+             }
+        } else {
+             // No preference saved, default logic
+             const viIndex = hlsSubs.findIndex(s => s.lang === 'vi' || (s.label && s.label.toLowerCase().includes('viet')));
+             if (viIndex !== -1) {
+                 initialSub = viIndex;
+                 activate = true;
+             } else if (hlsSubs.length > 0) {
+                 initialSub = 0;
+                 activate = true;
+             }
+        }
+
+        setActiveSubtitle(initialSub);
+        if (activate && initialSub !== -1) {
             hls.subtitleTrack = hlsSubs[initialSub].index;
             hls.subtitleDisplay = true;
         } else {
-             hls.subtitleTrack = -1;
-             hls.subtitleDisplay = false;
+            hls.subtitleTrack = -1;
+            hls.subtitleDisplay = false;
         }
 
         if (initialTime > 0) {
@@ -171,12 +232,14 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
               break;
             default:
               hls.destroy();
+              setError("Không thể tải video. Vui lòng thử server khác hoặc tải lại trang.");
               break;
           }
         }
       });
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       videoRef.current.src = src;
+      setError(null);
       if (initialTime > 0) {
         videoRef.current.currentTime = initialTime;
       }
@@ -197,12 +260,12 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      // Don't hide if paused, showing submenu, or hovering controls
-      if (isPlaying && !showSubMenu && !isHoveringControls) { 
+      // Don't hide if paused, showing submenu, hovering controls, or showing auto-next
+      if (isPlaying && !showSubMenu && !isHoveringControls && !showAutoNext) { 
         setShowControls(false);
       }
     }, 3000);
-  }, [isPlaying, showSubMenu, isHoveringControls]);
+  }, [isPlaying, showSubMenu, isHoveringControls, showAutoNext]);
 
   const handleMouseLeave = useCallback(() => {
     if (isPlaying && !showSubMenu) setShowControls(false);
@@ -320,7 +383,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(console.error);
+      if (containerRef.current) containerRef.current.requestFullscreen().catch(console.error);
       setIsFullscreen(true);
     } else {
       document.exitFullscreen();
@@ -328,11 +391,80 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     }
   }, []);
 
+  const togglePiP = useCallback(async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (videoRef.current && videoRef.current !== document.pictureInPictureElement) {
+        await videoRef.current.requestPictureInPicture();
+      }
+    } catch (error) {
+      console.error("PiP failed:", error);
+    }
+  }, []);
+
+  const handleContainerClick = useCallback((e) => {
+    // Prevent click if we are clicking controls (handled by stopPropagation in controls, but just in case)
+    if (e.target.closest('.custom-controls')) return;
+
+    if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+    } else {
+        clickTimeoutRef.current = setTimeout(() => {
+            togglePlay();
+            clickTimeoutRef.current = null;
+        }, 300); // 300ms delay to wait for potential double click
+    }
+  }, [togglePlay]);
+
+  const handleContainerDoubleClick = useCallback((e) => {
+      // Clear single click timer
+      if (clickTimeoutRef.current) {
+          clearTimeout(clickTimeoutRef.current);
+          clickTimeoutRef.current = null;
+      }
+
+      // Logic: Left 25% -> Rewind, Right 25% -> Forward, Center -> Fullscreen
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const percentage = clickX / width;
+
+      if (percentage < 0.25) {
+          // Rewind 10s
+          if (videoRef.current) {
+              videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+              handleMouseMove();
+              setSeekOverlay('rewind');
+              setTimeout(() => setSeekOverlay(null), 600);
+          }
+      } else if (percentage > 0.75) {
+          // Forward 10s
+          if (videoRef.current) {
+               videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+               handleMouseMove();
+               setSeekOverlay('forward');
+               setTimeout(() => setSeekOverlay(null), 600);
+          }
+      } else {
+          toggleFullscreen();
+      }
+  }, [toggleFullscreen, handleMouseMove]);
+
   const handleQualityChange = (event) => {
     const newQuality = parseInt(event.target.value);
     setCurrentQuality(newQuality);
     if (hlsRef.current) {
       hlsRef.current.currentLevel = newQuality;
+    }
+    // Save preference (save height if not auto)
+    if (newQuality === -1) {
+        localStorage.setItem('preferredQuality', '-1');
+    } else {
+        const level = qualityLevels.find(l => l.index === newQuality);
+        if (level) localStorage.setItem('preferredQuality', level.height);
     }
   };
 
@@ -403,35 +535,80 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePlay, toggleFullscreen, toggleMute, handleMouseMove]);
   
+  // Auto Next Timer Logic
+  useEffect(() => {
+     let interval = null;
+     if (showAutoNext && autoNextTimer > 0) {
+         interval = setInterval(() => {
+             setAutoNextTimer(prev => prev - 1);
+         }, 1000);
+     } else if (showAutoNext && autoNextTimer === 0) {
+         setShowAutoNext(false);
+         if (hasNext && onNext) onNext();
+     }
+     return () => { if (interval) clearInterval(interval); };
+  }, [showAutoNext, autoNextTimer, hasNext, onNext]);
+
+  const cancelAutoNext = () => {
+      setShowAutoNext(false);
+      setAutoNextTimer(5);
+  };
+
+  const handleManualNext = () => {
+      setShowAutoNext(false);
+      if (hasNext && onNext) onNext();
+  };
+
   // Loading
   const handleWaiting = () => setIsWaiting(true);
-  const handlePlaying = () => { setIsWaiting(false); setIsPlaying(true); };
-  const handleCanPlay = () => setIsWaiting(false);
+  const handlePlaying = () => { setIsWaiting(false); setIsPlaying(true); setError(null); };
+  const handleCanPlay = () => { setIsWaiting(false); setError(null); };
+
+  const handleVideoError = () => {
+      if (videoRef.current && videoRef.current.error) {
+          setError(`Lỗi: ${videoRef.current.error.message || "Video không phát được"}`);
+          setIsWaiting(false);
+      }
+  };
 
   return (
     <div 
       className={`video-player-container custom-player ${!showControls && isPlaying ? 'hide-cursor' : ''}`} 
       ref={containerRef}
-      onDoubleClick={toggleFullscreen}
+      onClick={handleContainerClick}
+      onDoubleClick={handleContainerDoubleClick}
       onMouseMove={handleMouseMove}
       onPointerMove={handleMouseMove} // Better support for some devices/browsers
       onMouseLeave={handleMouseLeave}
     >
+      <style>{`
+        @keyframes fadeZoom {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+      `}</style>
       <video
         ref={videoRef}
+        playsInline
         poster={poster}
-        onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onWaiting={handleWaiting}
         onPlaying={handlePlaying}
         onCanPlay={handleCanPlay}
+        onError={handleVideoError}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
            setIsPlaying(false);
-           if (hasNext && onNext) onNext();
+           if (hasNext) {
+               setShowAutoNext(true);
+               setAutoNextTimer(5);
+           } else {
+               // Just stop
+           }
         }}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'contain' }}
         crossOrigin="anonymous" // Essential for tracks
       >
         {subtitles.map((sub, index) => (
@@ -527,7 +704,62 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       }, [activeSubtitle, subtitles]) || null}
       
       {/* Loading Spinner */}
-      {isWaiting && ( <div className="video-loader"><div className="spinner"></div></div> )}
+      {isWaiting && !error && !showAutoNext && ( <div className="video-loader"><div className="spinner"></div></div> )}
+
+      {/* Error Overlay */}
+      {error && (
+          <div className="absolute-overlay" style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', 
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 20
+          }}>
+              <svg viewBox="0 0 24 24" fill="#e50914" width="48" height="48" style={{marginBottom: '10px'}}><path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
+              <p style={{color: 'white', marginBottom: '15px'}}>{error}</p>
+              <button onClick={() => window.location.reload()} style={{padding: '8px 16px', borderRadius: '4px', background: 'var(--primary-color)', color: 'white', border: 'none', cursor: 'pointer'}}>
+                  Tải lại trang
+              </button>
+          </div>
+      )}
+
+      {/* Auto Next Overlay */}
+      {showAutoNext && (
+          <div className="absolute-overlay" style={{
+              position: 'absolute', bottom: '60px', right: '20px', 
+              background: 'rgba(0,0,0,0.85)', padding: '20px', borderRadius: '8px', zIndex: 30,
+              border: '1px solid rgba(255,255,255,0.1)', maxWidth: '300px'
+          }}>
+              <h4 style={{margin: '0 0 10px 0', fontSize: '16px', color: '#fff'}}>Tập tiếp theo</h4>
+              <p style={{margin: '0 0 15px 0', fontSize: '14px', color: '#aaa'}}>Tự động phát sau <span style={{color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '18px'}}>{autoNextTimer}s</span></p>
+              <div style={{display: 'flex', gap: '10px'}}>
+                  <button onClick={handleManualNext} style={{
+                      flex: 1, padding: '8px', background: 'var(--primary-color)', color: 'white', 
+                      border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+                  }}>
+                      Xem ngay
+                  </button>
+                  <button onClick={cancelAutoNext} style={{
+                      flex: 1, padding: '8px', background: 'transparent', color: 'white', 
+                      border: '1px solid #aaa', borderRadius: '4px', cursor: 'pointer'
+                  }}>
+                      Huỷ
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {/* Seek Overlay Animation */}
+      {seekOverlay && (
+          <div style={{
+              position: 'absolute', top: '50%', left: seekOverlay === 'rewind' ? '20%' : '80%', transform: 'translate(-50%, -50%)',
+              background: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: '80px', height: '80px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+              animation: 'fadeZoom 0.6s ease-out forwards', pointerEvents: 'none'
+          }}>
+              {seekOverlay === 'rewind' ? 
+                  <div style={{textAlign: 'center'}}><svg viewBox="0 0 24 24" fill="white" width="40" height="40"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg><div style={{fontSize: '12px', fontWeight: 'bold'}}>-10s</div></div> : 
+                  <div style={{textAlign: 'center'}}><svg viewBox="0 0 24 24" fill="white" width="40" height="40"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg><div style={{fontSize: '12px', fontWeight: 'bold'}}>+10s</div></div>
+              }
+          </div>
+      )}
 
       {/* Play Button Overlay */}
       {!isPlaying && !isWaiting && (
@@ -608,7 +840,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
                   }}>
                       <div 
                          style={{padding: '5px 10px', cursor: 'pointer', color: activeSubtitle === -1 ? 'var(--primary-color)' : 'white'}}
-                         onClick={() => { setActiveSubtitle(-1); setShowSubMenu(false); }}
+                         onClick={() => { setActiveSubtitle(-1); localStorage.setItem('preferredSubtitleLang', 'off'); setShowSubMenu(false); }}
                       >
                          Tắt (Off)
                       </div>
@@ -623,7 +855,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
                                color: activeSubtitle === idx ? 'var(--primary-color)' : 'white',
                                maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                             }}
-                            onClick={() => { setActiveSubtitle(idx); setShowSubMenu(false); }}
+                            onClick={() => { setActiveSubtitle(idx); localStorage.setItem('preferredSubtitleLang', sub.lang || sub.label); setShowSubMenu(false); }}
                          >
                             {sub.label}
                          </div>
@@ -655,6 +887,12 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
                 {qualityLevels.map((level) => <option key={level.index} value={level.index}>{level.height}p</option>)}
               </select>
             )}
+            {/* PiP Button */}
+            {document.pictureInPictureEnabled && (
+                <button className="control-btn" onClick={togglePiP} title="Picture in Picture">
+                   <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>
+                </button>
+            )}
 
             <button className="control-btn" onClick={toggleFullscreen}>
               {isFullscreen ? <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-14v3h3v2h-5V5z"/></svg> : <svg viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v2h2V5h-5z"/></svg>}
@@ -665,5 +903,13 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
     </div>
   );
 };
+
+// CSS for hide-cursor
+const style = document.createElement('style');
+style.innerHTML = `
+  .hide-cursor { cursor: none; }
+  .video-player-container.hide-cursor .custom-controls { pointer-events: none; }
+`;
+document.head.appendChild(style);
 
 export default VideoPlayer;

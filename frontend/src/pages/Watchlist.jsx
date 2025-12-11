@@ -13,16 +13,18 @@ const Watchlist = () => {
   const { t, language } = useLanguage();
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    // Allows guest access
 
     const fetchWatchlist = async () => {
       try {
-        const langParam = language === 'vi' ? 'vi-VN' : 'en-US';
-        const response = await axios.get(`/watchlist/${user.id}?lang=${langParam}`);
-        setMovies(response.data);
+        if (user) {
+            const langParam = language === 'vi' ? 'vi-VN' : 'en-US';
+            const response = await axios.get(`/watchlist/${user.id}?lang=${langParam}`);
+            setMovies(response.data);
+        } else {
+            const localRaw = JSON.parse(localStorage.getItem('guestWatchlist') || '[]');
+            setMovies(localRaw);
+        }
       } catch (error) {
         console.error("Error fetching watchlist:", error);
       } finally {
@@ -38,7 +40,13 @@ const Watchlist = () => {
     e.preventDefault();
     if (window.confirm(t('confirm_remove') || "Remove from watchlist?")) {
       try {
-        await axios.delete(`/watchlist/${movieId}`);
+        if (user) {
+            await axios.delete(`/watchlist/${movieId}`);
+        } else {
+            const current = JSON.parse(localStorage.getItem('guestWatchlist') || '[]');
+            const updated = current.filter(m => m.slug !== movieId && m.id !== movieId);
+            localStorage.setItem('guestWatchlist', JSON.stringify(updated));
+        }
         setMovies(movies.filter(m => m.slug !== movieId));
       } catch (error) {
         console.error("Error removing from watchlist:", error);

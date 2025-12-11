@@ -305,6 +305,11 @@ const MovieDetail = () => {
         } catch (error) {
           console.error("Watchlist check error:", error);
         }
+      } else {
+          // Check LocalStorage
+          const current = JSON.parse(localStorage.getItem('guestWatchlist') || '[]');
+          const exists = current.some(m => m.slug === id || m.id === id);
+          setInWatchlist(exists);
       }
     };
 
@@ -435,18 +440,40 @@ const MovieDetail = () => {
   };
 
   const toggleWatchlist = async () => {
-    if (!user) {
-      alert(t('login_required') || "Please login to use this feature");
-      return;
-    }
-
     try {
-      if (inWatchlist) {
-        await axios.delete(`/watchlist/${id}`);
-        setInWatchlist(false);
+      if (user) {
+        if (inWatchlist) {
+          await axios.delete(`/watchlist/${id}`);
+          setInWatchlist(false);
+        } else {
+          await axios.post('/watchlist', { movieId: id });
+          setInWatchlist(true);
+        }
       } else {
-        await axios.post('/watchlist', { movieId: id });
-        setInWatchlist(true);
+        // Guest Watchlist
+        const current = JSON.parse(localStorage.getItem('guestWatchlist') || '[]');
+        const exists = current.find(m => m.slug === id || m.id === id);
+        
+        if (exists) {
+           const updated = current.filter(m => m.slug !== id && m.id !== id);
+           localStorage.setItem('guestWatchlist', JSON.stringify(updated));
+           setInWatchlist(false);
+        } else {
+           const item = {
+               id: id,
+               slug: movie.slug || id,
+               name: movie.name,
+               poster_url: movie.poster_url || movie.thumb_url,
+               year: getMovieYear(movie) || movie.year,
+               origin_name: movie.origin_name,
+               time: movie.time,
+               quality: movie.quality,
+               lang: movie.lang
+           };
+           current.unshift(item);
+           localStorage.setItem('guestWatchlist', JSON.stringify(current));
+           setInWatchlist(true);
+        }
       }
     } catch (error) {
       console.error("Error updating watchlist:", error);

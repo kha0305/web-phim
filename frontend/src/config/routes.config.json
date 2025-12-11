@@ -22,13 +22,11 @@
   },
   {
     "path": "/history",
-    "component": "History",
-    "protected": true
+    "component": "History"
   },
   {
     "path": "/watchlist",
-    "component": "Watchlist",
-    "protected": true
+    "component": "Watchlist"
   },
   {
     "path": "/profile",

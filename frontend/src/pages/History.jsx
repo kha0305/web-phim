@@ -13,11 +13,8 @@ const History = () => {
   const { t, language } = useLanguage();
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
+    // Allow guest access
+    
     const groupHistory = (data) => {
       const groups = {};
       const today = new Date().toDateString();
@@ -38,9 +35,23 @@ const History = () => {
 
     const fetchHistory = async () => {
       try {
-        const langParam = language === 'vi' ? 'vi-VN' : 'en-US';
-        const response = await axios.get(`/history/${user.id}?lang=${langParam}`);
-        groupHistory(response.data);
+        if (user) {
+            const langParam = language === 'vi' ? 'vi-VN' : 'en-US';
+            const response = await axios.get(`/history/${user.id}?lang=${langParam}`);
+            groupHistory(response.data);
+        } else {
+            // Local Storage for Guests
+            const localRaw = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+            // Adapter for consistent data structure
+            const adapted = localRaw.map(item => ({
+                ...item,
+                id: item.movieId,
+                _id: item.movieId,
+                watchedAt: item.timestamp,
+                // Ensure poster URL is present (local storage saves it as poster_url)
+            })).sort((a, b) => b.timestamp - a.timestamp);
+            groupHistory(adapted);
+        }
       } catch (error) {
         console.error("Error fetching history:", error);
       } finally {
@@ -54,7 +65,11 @@ const History = () => {
   const clearHistory = async () => {
     if (!window.confirm(t('confirm_clear_history') || "Bạn có chắc chắn muốn xóa toàn bộ lịch sử xem?")) return;
     try {
-      await axios.delete('/history');
+      if (user) {
+          await axios.delete('/history');
+      } else {
+          localStorage.removeItem('watchHistory');
+      }
       setHistoryGroups({});
     } catch (error) {
       console.error("Failed to clear history", error);
@@ -63,7 +78,13 @@ const History = () => {
 
   const removeHistoryItem = async (movieId) => {
     try {
-      await axios.delete(`/history/${movieId}`);
+      if (user) {
+          await axios.delete(`/history/${movieId}`);
+      } else {
+          const localHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+          const newHistory = localHistory.filter(h => h.movieId !== movieId && h.slug !== movieId);
+          localStorage.setItem('watchHistory', JSON.stringify(newHistory));
+      }
       // Refresh local state without refetching
       const newGroups = { ...historyGroups };
       for (const key in newGroups) {
