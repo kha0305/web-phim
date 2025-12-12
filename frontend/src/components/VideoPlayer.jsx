@@ -48,10 +48,9 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [isHoveringControls, setIsHoveringControls] = useState(false);
+  const isHoveringControlsRef = useRef(false);
   const [seekOverlay, setSeekOverlay] = useState(null); // 'forward' | 'rewind'
   const controlsTimeoutRef = useRef(null);
-  const clickTimeoutRef = useRef(null);
 
   // Apply volume and speed on mount/update
   useEffect(() => {
@@ -254,34 +253,33 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
   }, [src, initialTime]);
 
   // Controls Visibility
-  const handleMouseMove = useCallback(() => {
+  const handleMouseMove = useCallback((e) => {
     setShowControls(true);
+    
+    // Robust hover detection using coordinates
+    if (e && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        // Check if cursor is in the bottom 120px (controls area)
+        const relativeY = e.clientY - rect.top;
+        const isBottom = (rect.height - relativeY) <= 120;
+        isHoveringControlsRef.current = isBottom;
+    }
+
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
       // Don't hide if paused, showing submenu, hovering controls, or showing auto-next
-      if (isPlaying && !showSubMenu && !isHoveringControls && !showAutoNext) { 
+      if (isPlaying && !showSubMenu && !isHoveringControlsRef.current && !showAutoNext) { 
         setShowControls(false);
       }
     }, 3000);
-  }, [isPlaying, showSubMenu, isHoveringControls, showAutoNext]);
+  }, [isPlaying, showSubMenu, showAutoNext]);
 
   const handleMouseLeave = useCallback(() => {
     if (isPlaying && !showSubMenu) setShowControls(false);
+    isHoveringControlsRef.current = false;
   }, [isPlaying, showSubMenu]);
-
-  // If hovering controls state changes, we might need to re-evaluate or just let next move handle it.
-  // Actually, if we enter controls, we should clear timeout.
-  useEffect(() => {
-     if (isHoveringControls) {
-         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-         setShowControls(true);
-     } else if (isPlaying) {
-         // Re-trigger hide timer if we left controls and are playing
-         handleMouseMove();
-     }
-  }, [isHoveringControls, isPlaying, handleMouseMove]);
 
   useEffect(() => {
     return () => {
@@ -406,25 +404,10 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
   const handleContainerClick = useCallback((e) => {
     // Prevent click if we are clicking controls (handled by stopPropagation in controls, but just in case)
     if (e.target.closest('.custom-controls')) return;
-
-    if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
-        clickTimeoutRef.current = null;
-    } else {
-        clickTimeoutRef.current = setTimeout(() => {
-            togglePlay();
-            clickTimeoutRef.current = null;
-        }, 300); // 300ms delay to wait for potential double click
-    }
+    togglePlay();
   }, [togglePlay]);
 
   const handleContainerDoubleClick = useCallback((e) => {
-      // Clear single click timer
-      if (clickTimeoutRef.current) {
-          clearTimeout(clickTimeoutRef.current);
-          clickTimeoutRef.current = null;
-      }
-
       // Logic: Left 25% -> Rewind, Right 25% -> Forward, Center -> Fullscreen
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
@@ -571,6 +554,46 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       }
   };
 
+  // Sync Subtitles (HLS & Native)
+  useEffect(() => {
+     // Sync HLS
+     if (hlsRef.current) {
+         const currentSub = subtitles[activeSubtitle];
+         if (currentSub && currentSub.isHls) {
+             hlsRef.current.subtitleTrack = currentSub.index;
+             hlsRef.current.subtitleDisplay = true;
+         } else {
+             hlsRef.current.subtitleTrack = -1;
+             hlsRef.current.subtitleDisplay = false;
+         }
+     }
+
+     // Sync Native Tracks
+     if (videoRef.current) {
+        const tracks = videoRef.current.textTracks;
+        for (let i = 0; i < tracks.length; i++) {
+           const track = tracks[i];
+           const currentSub = subtitles[activeSubtitle];
+           
+           if (currentSub && !currentSub.isHls) {
+               if (track.label === currentSub.label) {
+                   track.mode = 'showing';
+               } else {
+                   track.mode = 'hidden';
+               }
+           } else {
+               if (activeSubtitle === -1) {
+                   track.mode = 'hidden';
+               } else if (currentSub && !currentSub.isHls && track.label === currentSub.label) {
+                  track.mode = 'showing';
+               } else if (currentSub && !currentSub.isHls) {
+                  track.mode = 'hidden';
+               }
+           }
+        }
+     }
+  }, [activeSubtitle, subtitles]);
+
   return (
     <div 
       className={`video-player-container custom-player ${!showControls && isPlaying ? 'hide-cursor' : ''}`} 
@@ -626,82 +649,7 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
         {/* We manipulate mode manually, but React needs default/mode prop hint */}
       </video>
 
-      {useEffect(() => {
-         // Sync HLS
-         if (hlsRef.current) {
-             const currentSub = subtitles[activeSubtitle];
-             if (currentSub && currentSub.isHls) {
-                 hlsRef.current.subtitleTrack = currentSub.index;
-                 hlsRef.current.subtitleDisplay = true;
-             } else {
-                 hlsRef.current.subtitleTrack = -1;
-                 hlsRef.current.subtitleDisplay = false;
-             }
-         }
 
-         // Sync Native Tracks
-         if (videoRef.current) {
-            const tracks = videoRef.current.textTracks;
-            for (let i = 0; i < tracks.length; i++) {
-               const track = tracks[i];
-               // If using HLS sub, hide all native text tracks (unless HLS uses native tracks?)
-               // HLS.js with enableWebVTT: true might be piping cues to a native track.
-               // Check if this track corresponds to our active custom subtitle.
-               
-               const currentSub = subtitles[activeSubtitle];
-               
-               // If active sub is Custom (not HLS) 
-               if (currentSub && !currentSub.isHls) {
-                   // Compare loosely or by index similarity if we mapped them 1:1. 
-                   // However, native tracks list might include HLS tracks if enableWebVTT is true!
-                   // Simpler approach: 
-                   // If HLS sub is active, we rely on HLS display (which might be native or canvas).
-                   // If Custom sub is active, we find the track with matching src/label and show it.
-                   
-                   // Note: track.src might not be available on TextTrack object. Use label/language.
-                   if (track.label === currentSub.label) {
-                       track.mode = 'showing';
-                   } else {
-                       track.mode = 'hidden';
-                   }
-               } else {
-                   // HLS Sub active or None active -> Hide "Custom" tracks.
-                   // But wait, if HLS uses native tracks, we shouldn't hide them if HLS enables them.
-                   // HLS.js controls its own tracks.
-                   // Safest: Hide only the tracks we know are custom?
-                   // Or just let HLS manage its tracks and we manage ours.
-                   
-                   // If "Off" (-1), hide everything
-                   if (activeSubtitle === -1) {
-                       track.mode = 'hidden';
-                   }
-                   
-                   // If custom sub not active, we force hide?
-                   // Let's rely on the loop above: we iterated all tracks.
-                   // If currentSub.isHls, we enabled HLS. We should ensure custom tracks are hidden.
-                   // Identifying custom tracks: they have blob URLs usually, but TextTrack obj doesn't show src.
-                   // We can assume if it's HLS managed, HLS will toggle `mode`. 
-                   // We just need to ensure we don't conflict.
-                   
-                   // Since we moved `enableWebVTT: true`, HLS might create native tracks.
-                   // For now, let's just loop and set 'hidden' only if we are sure we want to hide it.
-                   // Actually, with HLS.js, changing subtitleTrack usually updates the mode of the corresponding native track if enableWebVTT is on.
-                   // So we only need to manage non-HLS scenarios explicitly or "Off".
-                   
-                   if (activeSubtitle === -1) {
-                      track.mode = 'hidden';
-                   } else if (currentSub && !currentSub.isHls && track.label === currentSub.label) {
-                      track.mode = 'showing';
-                   } else if (currentSub && !currentSub.isHls) {
-                      track.mode = 'hidden';
-                   }
-                   // If HLS is active, we let HLS do its thing, unless we want to force hide others?
-                   // HLS usually manages its own.
-                   
-               }
-            }
-         }
-      }, [activeSubtitle, subtitles]) || null}
       
       {/* Loading Spinner */}
       {isWaiting && !error && !showAutoNext && ( <div className="video-loader"><div className="spinner"></div></div> )}
@@ -785,8 +733,6 @@ const VideoPlayer = ({ src, poster, initialTime = 0, onProgress, skipSegments = 
       {/* Controls */}
       <div 
           className={`custom-controls ${showControls ? 'visible' : 'hidden'}`}
-          onMouseEnter={() => setIsHoveringControls(true)}
-          onMouseLeave={() => setIsHoveringControls(false)}
           onClick={(e) => e.stopPropagation()} 
       >
         <div style={{position: 'absolute', right: '20px', bottom: '60px', color: 'rgba(255,255,255,0.5)', fontSize: '10px', pointerEvents: 'none'}}>Space: Play | F: Full | M: Mute | Arrows: Seek/Vol</div>
