@@ -129,7 +129,13 @@ export const translations = {
     all_countries: "Tất Cả Quốc Gia",
     all_years: "Tất Cả Năm",
     reset: "Đặt Lại",
-    agree_terms: "Tôi đồng ý với Điều Khoản Dịch Vụ và Chính Sách Quyền Riêng Tư"
+    agree_terms: "Tôi đồng ý với Điều Khoản Dịch Vụ và Chính Sách Quyền Riêng Tư",
+    categories: "Thể loại",
+    help: "Trợ giúp",
+    faq: "Câu hỏi thường gặp",
+    contact: "Liên hệ",
+    terms: "Điều khoản dịch vụ",
+    privacy: "Chính sách quyền riêng tư"
   },
   en: {
     home: "Home",
@@ -245,6 +251,12 @@ export const translations = {
     all_countries: "All Countries",
     all_years: "All Years",
     reset: "Reset",
-    agree_terms: "I agree to the Terms of Service and Privacy Policy"
+    agree_terms: "I agree to the Terms of Service and Privacy Policy",
+    categories: "Categories",
+    help: "Help",
+    faq: "FAQ",
+    contact: "Contact",
+    terms: "Terms of Service",
+    privacy: "Privacy Policy"
   }
 };

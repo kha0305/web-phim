@@ -18,24 +18,24 @@ const Footer = () => {
           </div>
           
           <div className="footer-section">
-            <h4 className="footer-title">{t('categories') || 'Thể loại'}</h4>
+            <h4 className="footer-title">{t('categories')}</h4>
             <div className="footer-links">
-              <Link to="/?genre=hanh-dong">Hành Động</Link>
-              <Link to="/?genre=tinh-cam">Tình Cảm</Link>
-              <Link to="/?genre=hai-huoc">Hài Hước</Link>
-              <Link to="/?genre=co-trang">Cổ Trang</Link>
-              <Link to="/?genre=tam-ly">Tâm Lý</Link>
-              <Link to="/?genre=hinh-su">Hình Sự</Link>
+              <Link to="/?genre=hanh-dong">{t('hanh-dong')}</Link>
+              <Link to="/?genre=tinh-cam">{t('tinh-cam')}</Link>
+              <Link to="/?genre=hai-huoc">{t('hai-huoc')}</Link>
+              <Link to="/?genre=co-trang">{t('co-trang')}</Link>
+              <Link to="/?genre=tam-ly">{t('tam-ly')}</Link>
+              <Link to="/?genre=hinh-su">{t('hinh-su')}</Link>
             </div>
           </div>
           
           <div className="footer-section">
-            <h4 className="footer-title">{t('help') || 'Trợ giúp'}</h4>
+            <h4 className="footer-title">{t('help')}</h4>
             <div className="footer-links">
-              <Link to="/">{t('faq') || 'Hỏi đáp'}</Link>
-              <Link to="/">{t('contact') || 'Liên hệ'}</Link>
-              <Link to="/">{t('terms') || 'Điều khoản sử dụng'}</Link>
-              <Link to="/">{t('privacy') || 'Chính sách bảo mật'}</Link>
+              <Link to="/faq">{t('faq')}</Link>
+              <a href="mailto:support@phimchill.com">{t('contact')}</a>
+              <Link to="/terms-of-service">{t('terms')}</Link>
+              <Link to="/privacy-policy">{t('privacy')}</Link>
             </div>
           </div>
         </div>
