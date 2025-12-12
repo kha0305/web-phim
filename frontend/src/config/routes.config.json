@@ -48,6 +48,10 @@
     "component": "Schedule"
   },
   {
+    "path": "/privacy-policy",
+    "component": "PrivacyPolicy"
+  },
+  {
     "path": "*",
     "component": "NotFound"
   }

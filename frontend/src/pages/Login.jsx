@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { useLanguage } from '../context/LanguageContext';
+import { GoogleLogin } from '@react-oauth/google';
+import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
 
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -25,6 +27,33 @@ const Login = () => {
     } catch (error) {
       console.error("Login error:", error);
       setError('Invalid credentials');
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+      try {
+          const res = await axios.post('/auth/google', { token: credentialResponse.credential });
+          login(res.data.user, res.data.token);
+          navigate('/');
+      } catch (error) {
+          console.error("Google Login Failed", error);
+          setError('Google Login Failed');
+      }
+  };
+
+  const responseFacebook = async (response) => {
+    if (response.accessToken) {
+        try {
+            const res = await axios.post('/auth/facebook', { 
+                accessToken: response.accessToken, 
+                userID: response.userID 
+            });
+            login(res.data.user, res.data.token);
+            navigate('/');
+        } catch (error) {
+            console.error("Facebook Login Failed", error);
+            setError('Facebook Login Failed');
+        }
     }
   };
 
@@ -75,6 +104,38 @@ const Login = () => {
         </div>
         <button type="submit" className="btn btn-primary">{t('login_button')}</button>
       </form>
+      
+      <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+        <div style={{ flex: 1, height: '1px', background: '#333' }}></div>
+        <span style={{ padding: '0 10px', color: '#666' }}>OR</span>
+        <div style={{ flex: 1, height: '1px', background: '#333' }}></div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError('Google Login Failed')}
+                theme="filled_black"
+                shape="pill"
+            />
+          </div>
+
+          <FacebookLogin
+            appId="747959397676893"
+            autoLoad={false}
+            fields="name,email,picture"
+            callback={responseFacebook}
+            render={renderProps => (
+              <button onClick={renderProps.onClick} style={{
+                  backgroundColor: '#1877f2', color: 'white', padding: '10px', border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold'
+              }}>
+                Login with Facebook
+              </button>
+            )}
+          />
+      </div>
+
       <p style={{ marginTop: '1rem', textAlign: 'center', color: '#aaa' }}>
         <Link to="/forgot-password" style={{ color: '#aaa', fontSize: '0.9rem' }}>Forgot Password?</Link>
       </p>

@@ -2,8 +2,12 @@ const { User, Otp } = require('../../infrastructure/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_this';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "333591897556-pabe3aospa2vqpoas18i90607fouipcu.apps.googleusercontent.com";
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', 
@@ -83,6 +87,112 @@ class AuthService {
         } catch (error) {
             console.error("Login error:", error);
             res.status(500).json({ error: "Login failed" });
+        }
+    }
+
+    async loginGoogle(req, res) {
+        try {
+            const { token } = req.body;
+            if (!token) return res.status(400).json({ error: "Missing token" });
+
+            // Verify Google Token
+            const ticket = await client.verifyIdToken({
+                idToken: token,
+                audience: GOOGLE_CLIENT_ID,  
+            });
+            const payload = ticket.getPayload();
+            const { email, name, picture } = payload;
+
+            // Check if user exists
+            let user = await User.findOne({ where: { email } });
+
+            if (!user) {
+                // Determine unique username
+                let username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+                let isUnique = false;
+                while(!isUnique) {
+                   const check = await User.findOne({ where: { username }});
+                   if(!check) isUnique = true;
+                   else username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 10000);
+                }
+
+                // Create random password
+                const randomPass = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+                const hashedPassword = await bcrypt.hash(randomPass, 10);
+
+                // Create User
+                user = await User.create({
+                    username,
+                    email,
+                    password: hashedPassword,
+                    avatar: picture,
+                    role: 'user'
+                });
+                
+                sendWelcomeEmail(email, username);
+            }
+
+            // Generate JWT
+            const jwtToken = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
+            res.json({
+                user: { id: user.id, username: user.username, email: user.email, role: user.role, avatar: user.avatar },
+                token: jwtToken
+            });
+
+        } catch (error) {
+            console.error("Google Login Error:", error);
+            res.status(401).json({ error: "Google Authentication Failed" });
+        }
+    }
+
+    async loginFacebook(req, res) {
+        try {
+            const { accessToken, userID } = req.body;
+            if (!accessToken) return res.status(400).json({ error: "Missing token" });
+
+            // Verify with Graph API
+            const response = await axios.get(`https://graph.facebook.com/v18.0/me`, {
+                params: {
+                    fields: 'id,name,email,picture',
+                    access_token: accessToken
+                }
+            });
+
+            const { email, name, picture, id } = response.data;
+            if (id !== userID) return res.status(401).json({ error: "Invalid User ID" });
+
+            // We need email to identify user. FB might not return email if user denies permission.
+            // If no email, we can't link effectively or need to use FB ID. 
+            // For simplicity, require email or fallback to generated email
+            const userEmail = email || `${id}@facebook.com`; 
+
+            let user = await User.findOne({ where: { email: userEmail } });
+
+            if (!user) {
+                 let username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+                 const randomPass = Math.random().toString(36).slice(-8);
+                 const hashedPassword = await bcrypt.hash(randomPass, 10);
+                 const avatarUrl = picture?.data?.url || '';
+
+                 user = await User.create({
+                     username,
+                     email: userEmail,
+                     password: hashedPassword,
+                     avatar: avatarUrl,
+                     role: 'user'
+                 });
+                 sendWelcomeEmail(userEmail, username);
+            }
+
+            const jwtToken = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
+            res.json({
+                user: { id: user.id, username: user.username, email: user.email, role: user.role, avatar: user.avatar },
+                token: jwtToken
+            });
+
+        } catch (error) {
+            console.error("Facebook Login Error:", error);
+            res.status(401).json({ error: "Facebook Authentication Failed" });
         }
     }
 

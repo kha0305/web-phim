@@ -1,5 +1,17 @@
 [
   {
+    "method": "POST",
+    "path": "/api/auth/google",
+    "handler": "AuthService.loginGoogle",
+    "permissions": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/facebook",
+    "handler": "AuthService.loginFacebook",
+    "permissions": []
+  },
+  {
     "path": "/",
     "method": "GET",
     "handler": "SystemService.check",

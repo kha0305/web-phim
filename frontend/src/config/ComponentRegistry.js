@@ -13,6 +13,7 @@ const Registry = {
   NotFound: React.lazy(() => import('../pages/NotFound')),
   AdminDashboard: React.lazy(() => import('../pages/AdminDashboard')),
   Schedule: React.lazy(() => import('../pages/Schedule')),
+  PrivacyPolicy: React.lazy(() => import('../pages/PrivacyPolicy')),
 };
 
 export default Registry;
