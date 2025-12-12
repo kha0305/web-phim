@@ -10,6 +10,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -17,6 +18,11 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!agreed) {
+      setError(t('agree_terms_error') || 'Bạn phải đồng ý với Điều Khoản và Chính Sách.');
+      return;
+    }
 
     if (password.length < 8 || password.length > 20) {
       setError(t('password_length_error') || 'Mật khẩu phải từ 8 đến 20 ký tự.');
@@ -107,7 +113,21 @@ const Register = () => {
              )}
           </button>
         </div>
-        <button type="submit" className="btn btn-primary">{t('register_button')}</button>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <input 
+            type="checkbox" 
+            id="agree_terms" 
+            checked={agreed} 
+            onChange={(e) => setAgreed(e.target.checked)} 
+            style={{ marginTop: '5px' }}
+          />
+          <label htmlFor="agree_terms" style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.4' }}>
+            <span dangerouslySetInnerHTML={{ __html: t('agree_terms').replace('Điều Khoản Dịch Vụ', '<a href="/terms-of-service" target="_blank" style="color: #e50914">Điều Khoản Dịch Vụ</a>').replace('Chính Sách Quyền Riêng Tư', '<a href="/privacy-policy" target="_blank" style="color: #e50914">Chính Sách Quyền Riêng Tư</a>').replace('Terms of Service', '<a href="/terms-of-service" target="_blank" style="color: #e50914">Terms of Service</a>').replace('Privacy Policy', '<a href="/privacy-policy" target="_blank" style="color: #e50914">Privacy Policy</a>') }}></span>
+          </label>
+        </div>
+
+        <button type="submit" className="btn btn-primary" disabled={!agreed} style={{ opacity: agreed ? 1 : 0.5 }}>{t('register_button')}</button>
       </form>
       <p style={{ marginTop: '1rem', textAlign: 'center', color: '#aaa' }}>
         {t('already_have_account')} <Link to="/login" style={{ color: '#e50914' }}>{t('login')}</Link>

@@ -128,7 +128,8 @@ export const translations = {
     all_genres: "Tất Cả Thể Loại",
     all_countries: "Tất Cả Quốc Gia",
     all_years: "Tất Cả Năm",
-    reset: "Đặt Lại"
+    reset: "Đặt Lại",
+    agree_terms: "Tôi đồng ý với Điều Khoản Dịch Vụ và Chính Sách Quyền Riêng Tư"
   },
   en: {
     home: "Home",
@@ -243,6 +244,7 @@ export const translations = {
     all_genres: "All Genres",
     all_countries: "All Countries",
     all_years: "All Years",
-    reset: "Reset"
+    reset: "Reset",
+    agree_terms: "I agree to the Terms of Service and Privacy Policy"
   }
 };

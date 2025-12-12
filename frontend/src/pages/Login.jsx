@@ -13,6 +13,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [agreed, setAgreed] = useState(false); // Add agreed state
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -20,6 +21,13 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate agreement
+    if (!agreed) {
+      setError(t('agree_terms_error') || 'Bạn phải đồng ý với Điều Khoản và Chính Sách.');
+      return;
+    }
+
     try {
       const response = await axios.post('/auth/login', { username, password });
       login(response.data.user, response.data.token);
@@ -31,6 +39,17 @@ const Login = () => {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+      // For social login, we might skip this or enforce it too. 
+      // The user asked for "login must tick", so enforcing it here too is safer, 
+      // BUT Google button handles its own click. 
+      // Usually social login implies agreement. 
+      // However, if the user insists on ticking for login, I should probably block the social actions too if not agreed.
+      
+      if (!agreed) {
+        setError(t('agree_terms_error') || 'Bạn phải đồng ý với Điều Khoản và Chính Sách.');
+        return;
+      }
+
       try {
           const res = await axios.post('/auth/google', { token: credentialResponse.credential });
           login(res.data.user, res.data.token);
@@ -42,6 +61,11 @@ const Login = () => {
   };
 
   const responseFacebook = async (response) => {
+    if (!agreed) {
+        setError(t('agree_terms_error') || 'Bạn phải đồng ý với Điều Khoản và Chính Sách.');
+        return;
+    }
+
     if (response.accessToken) {
         try {
             const res = await axios.post('/auth/facebook', { 
@@ -102,7 +126,21 @@ const Login = () => {
              )}
           </button>
         </div>
-        <button type="submit" className="btn btn-primary">{t('login_button')}</button>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <input 
+            type="checkbox" 
+            id="agree_terms" 
+            checked={agreed} 
+            onChange={(e) => setAgreed(e.target.checked)} 
+            style={{ marginTop: '5px' }}
+          />
+          <label htmlFor="agree_terms" style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.4' }}>
+            <span dangerouslySetInnerHTML={{ __html: t('agree_terms')?.replace('Điều Khoản Dịch Vụ', '<a href="/terms-of-service" target="_blank" style="color: #e50914">Điều Khoản Dịch Vụ</a>').replace('Chính Sách Quyền Riêng Tư', '<a href="/privacy-policy" target="_blank" style="color: #e50914">Chính Sách Quyền Riêng Tư</a>').replace('Terms of Service', '<a href="/terms-of-service" target="_blank" style="color: #e50914">Terms of Service</a>').replace('Privacy Policy', '<a href="/privacy-policy" target="_blank" style="color: #e50914">Privacy Policy</a>') }}></span>
+          </label>
+        </div>
+
+        <button type="submit" className="btn btn-primary" disabled={!agreed} style={{ opacity: agreed ? 1 : 0.5 }}>{t('login_button')}</button>
       </form>
       
       <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
@@ -111,7 +149,7 @@ const Login = () => {
         <div style={{ flex: 1, height: '1px', background: '#333' }}></div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', opacity: agreed ? 1 : 0.5, pointerEvents: agreed ? 'auto' : 'none' }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <GoogleLogin
                 onSuccess={handleGoogleSuccess}

@@ -14,6 +14,7 @@ const Registry = {
   AdminDashboard: React.lazy(() => import('../pages/AdminDashboard')),
   Schedule: React.lazy(() => import('../pages/Schedule')),
   PrivacyPolicy: React.lazy(() => import('../pages/PrivacyPolicy')),
+  TermsOfService: React.lazy(() => import('../pages/TermsOfService')),
 };
 
 export default Registry;
