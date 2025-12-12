@@ -1,5 +1,36 @@
 const { User, Comment, View, Notification, History } = require('../../infrastructure/database');
 const { Op } = require('sequelize');
+const { fetchFromAPI } = require('../../infrastructure/cache');
+
+const KKPHIM_BASE_URL = "https://kkphim.vip";
+
+const cleanMovieSimple = (movie) => {
+    if (!movie) return {};
+    let cleanName = movie.name || movie.title || movie.origin_name || '';
+    cleanName = cleanName
+        .replace(/\[.*?\]/g, '')
+        .replace(/\(.*?\)/g, '')
+        .replace(/- Tập \d+.*$/, '')
+        .trim();
+    
+    let year = movie.year;
+    // Attempt to extract year from category if missing
+    if (!year && movie.category && Array.isArray(movie.category)) {
+         const yearCat = movie.category.find(c => /^\d{4}$/.test(c.name));
+         if (yearCat) year = yearCat.name;
+    }
+    // Fallback regex on name
+    if (!year) {
+        const match = cleanName.match(/\((\d{4})\)/);
+        if (match) year = match[1];
+    }
+    
+    return { 
+        name: cleanName, 
+        year: year || 'N/A', 
+        poster_url: movie.poster_url || movie.thumb_url 
+    };
+};
 
 class AdminService {
     async getStats(req, res) {
@@ -91,13 +122,23 @@ class AdminService {
              // Get movies sorted by views
             const views = await View.findAll({
                 order: [['count', 'DESC']],
-                limit: 100 // Limit to top 100 for now
+                limit: 100 // Limit to top 100
             });
-            // We might enrich this with History data for titles if View doesn't have it.
-            // But View model currently only has movieId and count.
-            // Let's return what we have. Frontend can potentially fetch details or we enhance View model later.
-            res.json(views);
+            
+            // Enrich with details from API
+            const enriched = await Promise.all(views.map(async (v) => {
+                try {
+                    const info = await fetchFromAPI(`${KKPHIM_BASE_URL}/phim/${v.movieId}`, { ttl: 7200000 }); // Cache 2h
+                    const details = cleanMovieSimple(info.movie || info);
+                    return { ...v.toJSON(), ...details };
+                } catch (e) {
+                    return { ...v.toJSON(), name: 'Unknown', year: 'N/A' };
+                }
+            }));
+            
+            res.json(enriched);
         } catch (error) {
+            console.error(error);
             res.status(500).json({ error: "Failed to fetch movies" });
         }
     }

@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Web Phim Stream',
+        name: 'Web Phim',
         short_name: 'WebPhim',
         description: 'Xem phim online miễn phí tốc độ cao',
         theme_color: '#000000',

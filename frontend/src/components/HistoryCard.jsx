@@ -53,9 +53,8 @@ const HistoryCard = ({ movie }) => {
         <div className="history-card-info">
           <h4 className="history-card-title" title={movie.name}>{movie.name}</h4>
           <div className="history-card-meta">
-            {movie.lastEpisodeName ? (
-               <span className="episode-badge">{movie.lastEpisodeName}</span>
-            ) : null}
+            {movie.lastEpisodeName && <span className="episode-badge">{movie.lastEpisodeName}</span>}
+            {movie.year && <span className="year-text" style={{fontSize: '0.8rem', color: '#aaa', margin: '0 5px'}}>{movie.year}</span>}
             <span className="time-left">{timeLeftLabel}</span>
           </div>
         </div>

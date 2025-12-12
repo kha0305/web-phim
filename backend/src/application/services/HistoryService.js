@@ -1,6 +1,6 @@
 const { History, View } = require('../../infrastructure/database');
 const { fetchFromAPI } = require('../../infrastructure/cache');
-const PHIMAPI_BASE_URL = "https://phimapi.com";
+const KKPHIM_BASE_URL = "https://kkphim.vip";
 
 class HistoryService {
     async getHistory(req, res) {
@@ -32,7 +32,7 @@ class HistoryService {
                 }
                 // Fallback for legacy data without titles in DB
                 try {
-                    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${item.movieId}`);
+                    const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/phim/${item.movieId}`);
                     if (data.status && data.movie) {
                          // Lazy update skipped for brevity
                          return { 

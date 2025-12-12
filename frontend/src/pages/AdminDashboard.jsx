@@ -109,6 +109,8 @@ const AdminDashboard = () => {
                           <thead>
                               <tr>
                                   <th>Movie ID</th>
+                                  <th>Movie Name</th>
+                                  <th>Year</th>
                                   <th>Views</th>
                                   <th>Actions</th>
                               </tr>
@@ -116,14 +118,21 @@ const AdminDashboard = () => {
                           <tbody>
                               {movies.map(movie => (
                                   <tr key={movie.id}>
-                                      <td style={{fontWeight: '500', color: '#fff'}}>{movie.movieId}</td>
+                                      <td style={{fontWeight: '500', color: '#fff', fontSize:'0.85rem'}}>{movie.movieId}</td>
+                                      <td>
+                                          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                              {movie.poster_url && <img src={movie.poster_url} alt="" style={{width:'30px', height:'45px', objectFit:'cover', borderRadius:'4px'}} />}
+                                              <span style={{color: '#e0e0e0', fontWeight:'500'}}>{movie.name || 'Loading...'}</span>
+                                          </div>
+                                      </td>
+                                      <td>{movie.year}</td>
                                       <td>{movie.count?.toLocaleString()}</td>
                                       <td>
                                           <button className="action-btn">View</button>
                                       </td>
                                   </tr>
                               ))}
-                              {movies.length === 0 && <tr><td colSpan="3" style={{textAlign:'center'}}>No data available</td></tr>}
+                              {movies.length === 0 && <tr><td colSpan="5" style={{textAlign:'center'}}>No data available</td></tr>}
                           </tbody>
                       </table>
                   </div>

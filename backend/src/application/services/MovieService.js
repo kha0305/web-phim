@@ -1,7 +1,8 @@
 const { fetchFromAPI } = require('../../infrastructure/cache');
 const { View } = require('../../infrastructure/database');
 
-const IPHIM_BASE_URL = "https://iphim.cc/api/films";
+const KKPHIM_BASE_URL = "https://kkphim.vip";
+const KKPHIM_BACKUP_URL = "https://kkphim1.com";
 const PHIMAPI_BASE_URL = "https://phimapi.com";
 const OPHIM_BASE_URL = "https://ophim1.com/phim";
 const NGUONC_BASE_URL = "https://phim.nguonc.com/api/film";
@@ -21,31 +22,50 @@ const cleanMovie = (movie) => {
         .replace(/- Tập \d+.*$/, '') // Remove - Tập 1...
         .trim();
 
+    // 2. Extract Year Smartly
+    let year = movie.year;
+    if (!year && movie.category && Array.isArray(movie.category)) {
+        const yearCat = movie.category.find(c => c.name && /(?:Năm\s+)?(\d{4})/.test(c.name));
+        if (yearCat) {
+             const match = yearCat.name.match(/(?:Năm\s+)?(\d{4})/);
+             if (match) year = match[1];
+        }
+    }
+    if (!year) {
+         // Try regex on title or original name
+         const nameYear = (movie.name || '').match(/\((\d{4})\)/);
+         if (nameYear) year = nameYear[1];
+         else {
+             const originYear = (movie.origin_name || '').match(/\b(\d{4})\b/);
+             if (originYear) year = originYear[1];
+         }
+    }
+
     return {
         ...movie,
         original_name: movie.origin_name || movie.original_name, // Keep ref
         clean_name: cleanName, // Smart title
-        // Ensure poster is never null (fallback placeholder if needed in frontend, but here ensure string)
+        // Ensure poster is never null
         poster_url: movie.poster_url || movie.thumb_url || '',
         thumb_url: movie.thumb_url || movie.poster_url || '',
-        year: movie.year || (movie.category && movie.category[3] ? movie.category[3].name : ''), // Try to extract year smart
+        year: year || '', 
     };
 };
 
 class MovieService {
     async getGenres(req, res) {
-        try { res.json(await fetchFromAPI(`${PHIMAPI_BASE_URL}/the-loai`, { ttl: 86400000 })); } // Cache 24h
+        try { res.json(await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai`, { ttl: 86400000 })); } // Cache 24h
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
     
     async getCountries(req, res) {
-        try { res.json(await fetchFromAPI(`${PHIMAPI_BASE_URL}/quoc-gia`, { ttl: 86400000 })); }
+        try { res.json(await fetchFromAPI(`${KKPHIM_BASE_URL}/quoc-gia`, { ttl: 86400000 })); }
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
 
     async getMoviesByGenre(req, res) {
         try { 
-            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/the-loai/${req.params.slug}?page=${req.query.page||1}`);
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai/${req.params.slug}?page=${req.query.page||1}`);
             if (data.items) data.items = data.items.map(cleanMovie);
             res.json(data); 
         }
@@ -54,7 +74,7 @@ class MovieService {
 
     async getMoviesByCountry(req, res) {
         try { 
-            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/quoc-gia/${req.params.slug}?page=${req.query.page||1}`);
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/quoc-gia/${req.params.slug}?page=${req.query.page||1}`);
             if (data.items) data.items = data.items.map(cleanMovie);
             res.json(data);
         }
@@ -63,7 +83,7 @@ class MovieService {
     
     async getMoviesByYear(req, res) {
         try { 
-            const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/nam-phat-hanh/${req.params.year}?page=${req.query.page||1}`);
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/nam-phat-hanh/${req.params.year}?page=${req.query.page||1}`);
             if (data.items) data.items = data.items.map(cleanMovie);
             res.json(data);
         }
@@ -74,7 +94,8 @@ class MovieService {
         const page = req.query.page || 1;
         if (page == 1 && popularCache.data && (Date.now() - popularCache.timestamp < 1800000)) return res.json(popularCache.data);
         try {
-            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/phim-moi-cap-nhat?page=${page}`);
+            // Standard Ophim/PhimApi structure usually has /danh-sach/phim-moi-cap-nhat
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/danh-sach/phim-moi-cap-nhat?page=${page}`);
             
             // Smart Filter: Remove items with no images or weird names
             if (data.items) {
@@ -94,7 +115,7 @@ class MovieService {
             const topViews = await View.findAll({ order: [['count', 'DESC']], limit: 12 }); // Get 12 to have buffer
             const movies = await Promise.all(topViews.map(async (v) => {
                 try {
-                    const d = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${v.movieId}`, { timeout: 2000 });
+                    const d = await fetchFromAPI(`${KKPHIM_BASE_URL}/phim/${v.movieId}`, { timeout: 2000 });
                     return d.status ? { ...cleanMovie(d.movie), viewCount: v.count } : null;
                 } catch { return null; }
             }));
@@ -106,7 +127,7 @@ class MovieService {
 
     async getMoviesByList(req, res) {
         try { 
-            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/danh-sach/${req.params.listSlug}?page=${req.query.page||1}`);
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/danh-sach/${req.params.listSlug}?page=${req.query.page||1}`);
             if(data.items) data.items = data.items.map(cleanMovie);
             res.json(data);
         }
@@ -119,7 +140,7 @@ class MovieService {
         
         try { 
             // 1. Standard Search
-            let data = await fetchFromAPI(`${IPHIM_BASE_URL}/search?keyword=${query}`, { ttl: 1800000 });
+            let data = await fetchFromAPI(`${KKPHIM_BASE_URL}/tim-kiem?keyword=${query}`, { ttl: 1800000 });
             
             // 2. Smart Fallback: If no results, try removing spaces for short keywords or trying English?
             // Actually, removing spaces is risky. Let's just return what we have but cleaned.
@@ -144,7 +165,7 @@ class MovieService {
             const randomGenre = genres[Math.floor(Math.random() * genres.length)];
             
             // Fetch page 1 of that genre
-            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/the-loai/${randomGenre}`);
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai/${randomGenre}`);
             
             if (data && data.items) {
                 // Shuffle Array (Fisher-Yates) to make it look "AI generated" and not just list order
@@ -172,8 +193,9 @@ class MovieService {
         res.setHeader('Cache-Control', 'public, max-age=300'); 
 
         const sources = [
+            { url: `${KKPHIM_BASE_URL}/phim/${slug}`, name: "KKPHIM" },
+            { url: `${KKPHIM_BACKUP_URL}/phim/${slug}`, name: "KKPHIM_BACKUP" },
             { url: `${PHIMAPI_BASE_URL}/phim/${slug}`, name: "PHIMAPI" },
-            { url: `${IPHIM_BASE_URL}/phim/${slug}`, name: "IPHIM" },
             { url: `${NGUONC_BASE_URL}/${slug}`, name: "NGUONC" },
             { url: `${OPHIM_BASE_URL}/${slug}`, name: "OPHIM" }
         ];

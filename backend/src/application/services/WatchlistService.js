@@ -1,6 +1,6 @@
 const { Watchlist } = require('../../infrastructure/database');
 const { fetchFromAPI } = require('../../infrastructure/cache');
-const PHIMAPI_BASE_URL = "https://phimapi.com";
+const KKPHIM_BASE_URL = "https://kkphim.vip";
 
 class WatchlistService {
     async getWatchlist(req, res) {
@@ -13,7 +13,7 @@ class WatchlistService {
             
             const detailedWatchlist = await Promise.all(watchlist.map(async (item) => {
                 try {
-                    const data = await fetchFromAPI(`${PHIMAPI_BASE_URL}/phim/${item.movieId}`);
+                    const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/phim/${item.movieId}`);
                     if (data.status && data.movie) {
                         return { ...data.movie, addedAt: item.addedAt };
                     }
