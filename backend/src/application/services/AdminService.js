@@ -2,11 +2,12 @@ const { User, Comment, View, Notification, History } = require('../../infrastruc
 const { Op } = require('sequelize');
 const { fetchFromAPI } = require('../../infrastructure/cache');
 
-const KKPHIM_BASE_URL = "https://kkphim.vip";
+const KKPHIM_BASE_URL = "https://phimapi.com";
 
+// Helper matches MovieService
 const cleanMovieSimple = (movie) => {
-    if (!movie) return {};
-    let cleanName = movie.name || movie.title || movie.origin_name || '';
+    if (!movie) return { name: 'Unknown', year: 'N/A' };
+    let cleanName = movie.name || movie.title || movie.origin_name || 'Unknown';
     cleanName = cleanName
         .replace(/\[.*?\]/g, '')
         .replace(/\(.*?\)/g, '')
@@ -16,8 +17,8 @@ const cleanMovieSimple = (movie) => {
     let year = movie.year;
     // Attempt to extract year from category if missing
     if (!year && movie.category && Array.isArray(movie.category)) {
-         const yearCat = movie.category.find(c => /^\d{4}$/.test(c.name));
-         if (yearCat) year = yearCat.name;
+         const yearCat = movie.category.find(c => c.name && /(?:Năm\s+)?(\d{4})/.test(c.name));
+         if (yearCat) year = yearCat.name.match(/(?:Năm\s+)?(\d{4})/)[1];
     }
     // Fallback regex on name
     if (!year) {
@@ -31,8 +32,9 @@ const cleanMovieSimple = (movie) => {
         poster_url: movie.poster_url || movie.thumb_url 
     };
 };
-
+// ... rest of class ...
 class AdminService {
+    // ... stats methods ...
     async getStats(req, res) {
         try {
             const userCount = await User.count();

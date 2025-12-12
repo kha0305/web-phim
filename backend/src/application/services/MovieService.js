@@ -1,11 +1,9 @@
 const { fetchFromAPI } = require('../../infrastructure/cache');
 const { View } = require('../../infrastructure/database');
 
-const KKPHIM_BASE_URL = "https://kkphim.vip";
-const KKPHIM_BACKUP_URL = "https://kkphim1.com";
-const PHIMAPI_BASE_URL = "https://phimapi.com";
-const OPHIM_BASE_URL = "https://ophim1.com/phim";
-const NGUONC_BASE_URL = "https://phim.nguonc.com/api/film";
+// User requested KKPhim, which documentation points to PhimAPI.com
+const KKPHIM_BASE_URL = "https://phimapi.com";
+const IPHIM_BASE_URL = "https://iphim.cc/api/films"; // Backup
 
 let popularCache = { data: null, timestamp: 0 };
 let topViewedCache = { data: null, timestamp: 0 };
@@ -14,15 +12,15 @@ let topViewedCache = { data: null, timestamp: 0 };
 const cleanMovie = (movie) => {
     if (!movie) return null;
     
-    // 1. Clean Title (Remove [HD], (2024), etc.)
-    let cleanName = movie.name || movie.title || movie.origin_name;
+    // 1. Clean Title
+    let cleanName = movie.name || movie.title || movie.origin_name || 'Unknown';
     cleanName = cleanName
-        .replace(/\[.*?\]/g, '') // Remove [HD]
-        .replace(/\(.*?\)/g, '') // Remove (2024)
-        .replace(/- Tập \d+.*$/, '') // Remove - Tập 1...
+        .replace(/\[.*?\]/g, '')
+        .replace(/\(.*?\)/g, '')
+        .replace(/- Tập \d+.*$/, '')
         .trim();
 
-    // 2. Extract Year Smartly
+    // 2. Extract Year 
     let year = movie.year;
     if (!year && movie.category && Array.isArray(movie.category)) {
         const yearCat = movie.category.find(c => c.name && /(?:Năm\s+)?(\d{4})/.test(c.name));
@@ -32,7 +30,6 @@ const cleanMovie = (movie) => {
         }
     }
     if (!year) {
-         // Try regex on title or original name
          const nameYear = (movie.name || '').match(/\((\d{4})\)/);
          if (nameYear) year = nameYear[1];
          else {
@@ -43,9 +40,8 @@ const cleanMovie = (movie) => {
 
     return {
         ...movie,
-        original_name: movie.origin_name || movie.original_name, // Keep ref
-        clean_name: cleanName, // Smart title
-        // Ensure poster is never null
+        original_name: movie.origin_name || movie.original_name, 
+        clean_name: cleanName,
         poster_url: movie.poster_url || movie.thumb_url || '',
         thumb_url: movie.thumb_url || movie.poster_url || '',
         year: year || '', 
@@ -54,7 +50,7 @@ const cleanMovie = (movie) => {
 
 class MovieService {
     async getGenres(req, res) {
-        try { res.json(await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai`, { ttl: 86400000 })); } // Cache 24h
+        try { res.json(await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai`, { ttl: 86400000 })); }
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
     
@@ -65,25 +61,32 @@ class MovieService {
 
     async getMoviesByGenre(req, res) {
         try { 
-            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai/${req.params.slug}?page=${req.query.page||1}`);
-            if (data.items) data.items = data.items.map(cleanMovie);
-            res.json(data); 
+            // PhimAPI uses /v1/api/the-loai
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/v1/api/the-loai/${req.params.slug}?page=${req.query.page||1}`);
+            // Structure is data.data.items usually for v1, or just data.items?
+            // Test showed data.items for /danh-sach but /v1/api/the-loai return might be wrapped.
+            // Let's handle both.
+            let items = data.items || (data.data && data.data.items) || [];
+            if (items) items = items.map(cleanMovie);
+            res.json({ ...data, items }); 
         }
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
 
     async getMoviesByCountry(req, res) {
         try { 
-            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/quoc-gia/${req.params.slug}?page=${req.query.page||1}`);
-            if (data.items) data.items = data.items.map(cleanMovie);
-            res.json(data);
+             const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/v1/api/quoc-gia/${req.params.slug}?page=${req.query.page||1}`);
+             let items = data.items || (data.data && data.data.items) || [];
+             if (items) items = items.map(cleanMovie);
+             res.json({ ...data, items });
         }
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
     
     async getMoviesByYear(req, res) {
         try { 
-            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/nam-phat-hanh/${req.params.year}?page=${req.query.page||1}`);
+            // Fallback to IPHIM for year if PhimAPI fails
+            const data = await fetchFromAPI(`${IPHIM_BASE_URL}/nam-phat-hanh/${req.params.year}?page=${req.query.page||1}`);
             if (data.items) data.items = data.items.map(cleanMovie);
             res.json(data);
         }
@@ -94,17 +97,16 @@ class MovieService {
         const page = req.query.page || 1;
         if (page == 1 && popularCache.data && (Date.now() - popularCache.timestamp < 1800000)) return res.json(popularCache.data);
         try {
-            // Standard Ophim/PhimApi structure usually has /danh-sach/phim-moi-cap-nhat
+            // /danh-sach/phim-moi-cap-nhat works at root
             const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/danh-sach/phim-moi-cap-nhat?page=${page}`);
             
-            // Smart Filter: Remove items with no images or weird names
             if (data.items) {
                 data.items = data.items
                     .map(cleanMovie)
-                    .filter(m => m.poster_url && !m.poster_url.includes('not-found')); // Filter bad data
+                    .filter(m => m.poster_url && !m.poster_url.includes('not-found'));
             }
 
-            if (page == 1) popularCache = { data, timestamp: Date.now() };
+            if (page == 1 && data.items) popularCache = { data, timestamp: Date.now() };
             res.json(data);
         } catch (e) { res.status(500).json({ error: "Error" }); }
     }
@@ -112,14 +114,14 @@ class MovieService {
     async getTopViewed(req, res) {
         if (topViewedCache.data && (Date.now() - topViewedCache.timestamp < 3600000)) return res.json(topViewedCache.data);
         try {
-            const topViews = await View.findAll({ order: [['count', 'DESC']], limit: 12 }); // Get 12 to have buffer
+            const topViews = await View.findAll({ order: [['count', 'DESC']], limit: 12 });
             const movies = await Promise.all(topViews.map(async (v) => {
                 try {
                     const d = await fetchFromAPI(`${KKPHIM_BASE_URL}/phim/${v.movieId}`, { timeout: 2000 });
                     return d.status ? { ...cleanMovie(d.movie), viewCount: v.count } : null;
                 } catch { return null; }
             }));
-            const result = movies.filter(Boolean).slice(0, 10); // Return top 10 valid
+            const result = movies.filter(Boolean).slice(0, 10);
             topViewedCache = { data: result, timestamp: Date.now() };
             res.json(result);
         } catch (e) { res.status(500).json({ error: "Error" }); }
@@ -139,48 +141,49 @@ class MovieService {
         if (!query) return res.json({ items: [] });
         
         try { 
-            // 1. Standard Search
-            let data = await fetchFromAPI(`${KKPHIM_BASE_URL}/tim-kiem?keyword=${query}`, { ttl: 1800000 });
+            // PhimAPI Search: /v1/api/tim-kiem?keyword=...
+            let data = await fetchFromAPI(`${KKPHIM_BASE_URL}/v1/api/tim-kiem?keyword=${query}`, { ttl: 1800000 });
+            let items = data.data && data.data.items ? data.data.items : (data.items || []);
             
-            // 2. Smart Fallback: If no results, try removing spaces for short keywords or trying English?
-            // Actually, removing spaces is risky. Let's just return what we have but cleaned.
+            // Check for image domain in search response
+            const imgDomain = data.data && data.data.APP_DOMAIN_CDN_IMAGE ? data.data.APP_DOMAIN_CDN_IMAGE : "";
             
-            if (data.items) data.items = data.items.map(cleanMovie);
-            res.json(data); 
+            items = items.map(m => {
+                let cm = cleanMovie(m);
+                // Search sometimes returns relative paths or full
+                if(imgDomain && cm.poster_url && !cm.poster_url.startsWith('http')) {
+                    cm.poster_url = `${imgDomain}/${cm.poster_url}`;
+                }
+                if(imgDomain && cm.thumb_url && !cm.thumb_url.startsWith('http')) {
+                    cm.thumb_url = `${imgDomain}/${cm.thumb_url}`;
+                }
+                return cm;
+            });
+
+            res.json({ ...data, items }); 
         }
         catch (e) { res.status(500).json({ error: "Error" }); }
     }
 
-    // --- NEW: SMART RECOMMENDATION ---
     async getRecommendations(req, res) {
         try {
-            // Genres can come from analyzing user history in DB, or passed from frontend localstorage
-            // Format: ['hanh-dong', 'kinh-di']
             let { genres } = req.body; 
-
-            // If no genres provided, default to 'hanh-dong' (Action) as it's popular
             if (!genres || genres.length === 0) genres = ['hanh-dong'];
-
-            // Pick one random genre to fetch (We can't fetch all at once easily)
             const randomGenre = genres[Math.floor(Math.random() * genres.length)];
             
-            // Fetch page 1 of that genre
-            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/the-loai/${randomGenre}`);
-            
-            if (data && data.items) {
-                // Shuffle Array (Fisher-Yates) to make it look "AI generated" and not just list order
-                for (let i = data.items.length - 1; i > 0; i--) {
+            const data = await fetchFromAPI(`${KKPHIM_BASE_URL}/v1/api/the-loai/${randomGenre}`);
+             let items = data.data && data.data.items ? data.data.items : (data.items || []);
+
+            if (items.length > 0) {
+                // Shuffle
+                for (let i = items.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [data.items[i], data.items[j]] = [data.items[j], data.items[i]];
+                    [items[i], items[j]] = [items[j], items[i]];
                 }
-                
-                // Return top 12 clean items
-                const cleanItems = data.items.map(cleanMovie).slice(0, 12);
+                const cleanItems = items.map(cleanMovie).slice(0, 12);
                 return res.json({ items: cleanItems, source_genre: randomGenre });
             }
-
             res.json({ items: [] });
-
         } catch (error) {
             console.error("Smart Recommend Failed", error);
             res.json({ items: [] });
@@ -189,20 +192,16 @@ class MovieService {
 
     async getDetail(req, res) {
         const { slug } = req.params;
-        const start = Date.now();
         res.setHeader('Cache-Control', 'public, max-age=300'); 
 
         const sources = [
             { url: `${KKPHIM_BASE_URL}/phim/${slug}`, name: "KKPHIM" },
-            { url: `${KKPHIM_BACKUP_URL}/phim/${slug}`, name: "KKPHIM_BACKUP" },
-            { url: `${PHIMAPI_BASE_URL}/phim/${slug}`, name: "PHIMAPI" },
-            { url: `${NGUONC_BASE_URL}/${slug}`, name: "NGUONC" },
-            { url: `${OPHIM_BASE_URL}/${slug}`, name: "OPHIM" }
+            { url: `${IPHIM_BASE_URL}/phim/${slug}`, name: "IPHIM" },
         ];
 
         try {
             const winner = await Promise.any(sources.map(src => {
-                return fetchFromAPI(src.url, { timeout: 2500 })
+                return fetchFromAPI(src.url, { timeout: 3000 })
                     .then(data => {
                         if (!data || (!data.movie && !data.status)) throw new Error("Invalid");
                         return data;
